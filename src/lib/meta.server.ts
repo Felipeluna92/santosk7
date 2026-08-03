@@ -318,7 +318,7 @@ async function waitForContainer(containerId: string, token: string, version: str
     }
     await new Promise((r) => setTimeout(r, 3000));
   }
-  throw new Error("Tempo esgotado aguardando a Meta processar o vídeo.");
+  throw new Error(`${RETRY_MARK}Ainda processando a mídia na Meta; vamos tentar de novo em instantes.`);
 }
 
 export async function publishPostById(postId: string) {
