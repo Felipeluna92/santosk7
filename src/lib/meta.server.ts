@@ -306,8 +306,8 @@ async function createContainer(
 /** Marker for failures that should be retried on the next scheduler run. */
 const RETRY_MARK = "__RETRY__";
 
-async function waitForContainer(containerId: string, token: string, version: string) {
-  for (let i = 0; i < 12; i++) {
+async function waitForContainer(containerId: string, token: string, version: string, tries = 6) {
+  for (let i = 0; i < tries; i++) {
     const json = await graph(
       `https://graph.instagram.com/${version}/${containerId}?fields=status_code,status&access_token=${encodeURIComponent(token)}`,
     );
@@ -316,10 +316,11 @@ async function waitForContainer(containerId: string, token: string, version: str
     if (status === "ERROR" || status === "EXPIRED") {
       throw new Error(`A Meta não conseguiu processar a mídia (${String(json["status"] ?? status)}).`);
     }
-    await new Promise((r) => setTimeout(r, 3000));
+    await new Promise((r) => setTimeout(r, 2500));
   }
   throw new Error(`${RETRY_MARK}Ainda processando a mídia na Meta; vamos tentar de novo em instantes.`);
 }
+
 
 export async function publishPostById(postId: string) {
   const env = readMetaEnv();
