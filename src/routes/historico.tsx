@@ -44,6 +44,7 @@ export const Route = createFileRoute("/historico")({
 });
 
 function Historico() {
+  const qc = useQueryClient();
   const posts = useQuery(postsQuery);
   const accounts = useQuery(accountsQuery);
   const [status, setStatus] = useState("all");
@@ -52,6 +53,18 @@ function Historico() {
 
   const nameOf = (id: string | null) =>
     accounts.data?.find((a) => a.id === id)?.username ?? "—";
+
+  const deleteOne = useMutation({
+    mutationFn: async (postId: string) => {
+      const { error } = await supabase.from("posts").delete().eq("id", postId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Post removido.");
+      qc.invalidateQueries({ queryKey: ["posts"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const rows = (posts.data ?? []).filter(
     (p) =>
