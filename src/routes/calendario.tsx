@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, PlayCircle, Ban, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronRight, PlayCircle, Ban, AlertTriangle, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
@@ -188,6 +188,11 @@ function Calendario() {
                       onClick={() => publishOne.mutate(p.id)}
                     >
                       Publicar
+                    </Button>
+                    <Button asChild size="sm" variant="outline" className="h-7 text-[11px]">
+                      <Link to="/composer" search={{ duplicar: p.id }}>
+                        <Copy className="h-3 w-3" /> Duplicar
+                      </Link>
                     </Button>
                     <Button
                       size="sm"

@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { History } from "lucide-react";
+import { History, Copy } from "lucide-react";
 
 import { AppShell, EmptyState } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -110,6 +111,7 @@ function Historico() {
                 <TableHead className="text-[11px] uppercase">Status</TableHead>
                 <TableHead className="text-[11px] uppercase">ID Meta</TableHead>
                 <TableHead className="text-[11px] uppercase">Erro</TableHead>
+                <TableHead className="text-[11px] uppercase text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -130,6 +132,13 @@ function Historico() {
                   </TableCell>
                   <TableCell className="max-w-[260px] truncate text-[11px] text-destructive">
                     {p.error_message ?? ""}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button asChild size="sm" variant="secondary" className="h-7 text-[11px]">
+                      <Link to="/composer" search={{ duplicar: p.id }}>
+                        <Copy className="h-3 w-3" /> Duplicar
+                      </Link>
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
