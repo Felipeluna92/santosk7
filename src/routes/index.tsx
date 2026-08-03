@@ -92,10 +92,19 @@ function Dashboard() {
     (p) => p.published_at && new Date(p.published_at).toDateString() === today,
   ).length;
 
-  const rows = insights.data ?? [];
+  type InsightRow = {
+    accountId: string;
+    username: string;
+    followers: number | null;
+    mediaCount: number | null;
+    views: number | null;
+    error?: string;
+  };
+  const rows: InsightRow[] = (insights.data as InsightRow[] | undefined) ?? [];
   const totalViews = rows.reduce((a, r) => a + (r.views ?? 0), 0);
   const totalFollowers = rows.reduce((a, r) => a + (r.followers ?? 0), 0);
   const hasInsights = rows.some((r) => r.followers !== null || r.views !== null);
+
 
   return (
     <AppShell
