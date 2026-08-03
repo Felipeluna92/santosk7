@@ -149,8 +149,8 @@ function Dashboard() {
       <InsightsChart />
 
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-3">
-        <div className="panel p-5 lg:col-span-2">
+      <div className="mt-3 grid min-w-0 gap-3 lg:grid-cols-3">
+        <div className="panel min-w-0 p-5 lg:col-span-2">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold">Próximos e recentes</h3>
             <Link to="/historico" className="text-xs text-muted-foreground hover:text-foreground">
