@@ -45,6 +45,7 @@ export const DEFAULT_SCOPES = [
   "instagram_business_basic",
   "instagram_business_content_publish",
   "instagram_business_manage_comments",
+  "instagram_business_manage_insights",
 ];
 
 export async function writeLog(
@@ -513,14 +514,20 @@ export async function fetchAccountsInsights() {
         `https://graph.instagram.com/${env.graphVersion}/me?fields=followers_count,media_count&access_token=${encodeURIComponent(token)}`,
       );
       let views: number | null = null;
+      let insightsError: string | undefined;
       try {
+        const until = Math.floor(Date.now() / 1000);
+        const since = until - 24 * 60 * 60;
         const ins = await graph(
-          `https://graph.instagram.com/${env.graphVersion}/me/insights?metric=views&period=day&metric_type=total_value&access_token=${encodeURIComponent(token)}`,
+          `https://graph.instagram.com/${env.graphVersion}/me/insights?metric=views&period=day&metric_type=total_value&since=${since}&until=${until}&access_token=${encodeURIComponent(token)}`,
         );
         const arr = (ins["data"] as { total_value?: { value?: number } }[] | undefined) ?? [];
-        views = arr[0]?.total_value?.value ?? null;
-      } catch {
+        const value = arr.find((metric) => typeof metric.total_value?.value === "number")?.total_value?.value;
+        views = typeof value === "number" ? value : null;
+        if (views === null) insightsError = "A API não retornou views para esta conta nas últimas 24 horas.";
+      } catch (e) {
         views = null;
+        insightsError = e instanceof Error ? e.message : "Métrica de views indisponível.";
       }
       results.push({
         accountId: acc.id,
@@ -528,6 +535,7 @@ export async function fetchAccountsInsights() {
         followers: (me["followers_count"] as number) ?? null,
         mediaCount: (me["media_count"] as number) ?? null,
         views,
+        ...(insightsError ? { error: insightsError } : {}),
       });
     } catch (e) {
       results.push({
