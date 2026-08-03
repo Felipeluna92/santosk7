@@ -8,6 +8,8 @@ import {
   RefreshCw,
   Sparkles,
   ArrowUpRight,
+  Eye,
+  Users,
 } from "lucide-react";
 
 import { AppShell, DemoBanner } from "@/components/AppShell";
@@ -16,7 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { accountsQuery, postsQuery, logsQuery, fmtDate, POST_STATUS, POST_TYPE_LABEL } from "@/lib/data";
 import { demoAccounts, demoPosts, demoLogs } from "@/lib/demo";
-import { getMetaStatus } from "@/lib/meta.functions";
+import { getMetaStatus, getAccountsInsights } from "@/lib/meta.functions";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
