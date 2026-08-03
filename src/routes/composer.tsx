@@ -1,7 +1,19 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Save, Send, CalendarClock, Image as ImageIcon, Film, Layers, FileText, Info } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Save,
+  Send,
+  CalendarClock,
+  Image as ImageIcon,
+  Film,
+  Layers,
+  FileText,
+  Info,
+  Copy,
+  Plus,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
