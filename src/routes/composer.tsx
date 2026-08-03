@@ -151,7 +151,7 @@ function Composer() {
     return null;
   })();
 
-  const payload = () => ({
+  const payload = (when?: string | null) => ({
     account_id: accountId || null,
     type,
     caption: caption || null,
@@ -159,13 +159,13 @@ function Composer() {
     media_url: type === "CAROUSEL" ? null : mediaUrl || null,
     cover_url: type === "REEL" ? coverUrl || null : null,
     carousel_urls: type === "CAROUSEL" ? carouselUrls : [],
-    scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+    scheduled_at: when ? new Date(when).toISOString() : null,
   });
 
-  const savePost = async (status: string) => {
+  const savePost = async (status: string, when?: string | null) => {
     const { data, error } = await supabase
       .from("posts")
-      .insert({ ...payload(), status })
+      .insert({ ...payload(when ?? scheduledAt), status })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
@@ -181,17 +181,20 @@ function Composer() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const allTimes = [scheduledAt, ...extraTimes].filter(Boolean);
+
   const scheduleMutation = useMutation({
     mutationFn: async () => {
-      if (!scheduledAt) throw new Error("Escolha a data e a hora do agendamento.");
-      if (new Date(scheduledAt).getTime() < Date.now())
-        throw new Error("A data de agendamento precisa ser no futuro.");
+      if (!allTimes.length) throw new Error("Escolha a data e a hora do agendamento.");
+      if (allTimes.some((t) => new Date(t).getTime() < Date.now()))
+        throw new Error("Todos os horários precisam ser no futuro.");
       if (capabilityError) throw new Error(capabilityError);
       if (mediaError) throw new Error(mediaError);
-      return savePost("scheduled");
+      for (const t of allTimes) await savePost("scheduled", t);
+      return allTimes.length;
     },
-    onSuccess: () => {
-      toast.success("Post agendado.");
+    onSuccess: (n) => {
+      toast.success(n > 1 ? `${n} publicações agendadas.` : "Post agendado.");
       qc.invalidateQueries({ queryKey: ["posts"] });
       navigate({ to: "/calendario" });
     },
@@ -202,7 +205,7 @@ function Composer() {
     mutationFn: async () => {
       if (capabilityError) throw new Error(capabilityError);
       if (mediaError) throw new Error(mediaError);
-      const id = await savePost("draft");
+      const id = await savePost("draft", null);
       return publishPost({ data: { postId: id } });
     },
     onSuccess: () => {
@@ -215,7 +218,8 @@ function Composer() {
   const busy = draftMutation.isPending || scheduleMutation.isPending || publishMutation.isPending;
 
   return (
-    <AppShell title="Composer" subtitle="Criação com validação das capacidades oficiais da API">
+    <AppShell title="Publicar" subtitle="Criação, duplicação e agendamento em vários horários">
+
       <Tabs value={type} onValueChange={(v) => setType(v as typeof type)}>
         <TabsList className="bg-surface">
           <TabsTrigger value="POST">
