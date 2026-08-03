@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, PlayCircle, Ban, AlertTriangle, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, PlayCircle, Ban, AlertTriangle, Copy, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
@@ -81,6 +81,18 @@ function Calendario() {
     },
     onSuccess: () => {
       toast.success("Agendamento cancelado.");
+      qc.invalidateQueries({ queryKey: ["posts"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteOne = useMutation({
+    mutationFn: async (postId: string) => {
+      const { error } = await supabase.from("posts").delete().eq("id", postId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Agendamento removido.");
       qc.invalidateQueries({ queryKey: ["posts"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -203,6 +215,17 @@ function Calendario() {
                       onClick={() => cancelOne.mutate(p.id)}
                     >
                       <Ban className="h-3 w-3" /> Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-[11px] text-destructive hover:text-destructive"
+                      disabled={deleteOne.isPending}
+                      onClick={() => {
+                        if (confirm("Remover este agendamento? Não dá pra desfazer.")) deleteOne.mutate(p.id);
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" /> Remover
                     </Button>
                   </div>
                 </li>

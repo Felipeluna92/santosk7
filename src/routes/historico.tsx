@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { History, Copy } from "lucide-react";
+import { History, Copy, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
+import { supabase } from "@/integrations/supabase/client";
 
 import { AppShell, EmptyState } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +44,7 @@ export const Route = createFileRoute("/historico")({
 });
 
 function Historico() {
+  const qc = useQueryClient();
   const posts = useQuery(postsQuery);
   const accounts = useQuery(accountsQuery);
   const [status, setStatus] = useState("all");
@@ -49,6 +53,18 @@ function Historico() {
 
   const nameOf = (id: string | null) =>
     accounts.data?.find((a) => a.id === id)?.username ?? "—";
+
+  const deleteOne = useMutation({
+    mutationFn: async (postId: string) => {
+      const { error } = await supabase.from("posts").delete().eq("id", postId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Post removido.");
+      qc.invalidateQueries({ queryKey: ["posts"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const rows = (posts.data ?? []).filter(
     (p) =>
@@ -134,11 +150,24 @@ function Historico() {
                     {p.error_message ?? ""}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button asChild size="sm" variant="secondary" className="h-7 text-[11px]">
-                      <Link to="/composer" search={{ duplicar: p.id }}>
-                        <Copy className="h-3 w-3" /> Duplicar
-                      </Link>
-                    </Button>
+                    <div className="flex justify-end gap-1.5">
+                      <Button asChild size="sm" variant="secondary" className="h-7 text-[11px]">
+                        <Link to="/composer" search={{ duplicar: p.id }}>
+                          <Copy className="h-3 w-3" /> Duplicar
+                        </Link>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-[11px] text-destructive hover:text-destructive"
+                        disabled={deleteOne.isPending}
+                        onClick={() => {
+                          if (confirm("Remover este post? Não dá pra desfazer.")) deleteOne.mutate(p.id);
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
