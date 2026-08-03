@@ -43,13 +43,13 @@ function MetricCard({
   icon: typeof AtSign;
 }) {
   return (
-    <div className="panel-glow relative overflow-hidden px-5 py-6">
+    <div className="panel-glow relative overflow-hidden px-4 py-5 sm:px-5 sm:py-6">
       <span className="absolute inset-y-4 left-0 w-[3px] rounded-full bg-[image:var(--gradient-brand)]" />
       <div className="flex items-start justify-between">
         <p className="text-[12px] text-muted-foreground">{label}</p>
         <Icon className="h-4 w-4 text-primary/70" />
       </div>
-      <p className="brand-gradient-text mt-3 font-display text-4xl font-semibold tracking-tight">{value}</p>
+      <p className="brand-gradient-text mt-2 font-display text-2xl font-semibold tracking-tight sm:mt-3 sm:text-4xl">{value}</p>
       {hint ? <p className="mt-1.5 text-[11px] text-muted-foreground">{hint}</p> : null}
     </div>
   );
@@ -112,13 +112,13 @@ function Dashboard() {
       </section>
 
       {loading ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-[132px] rounded-xl" />
           ))}
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <MetricCard
             label="Views registradas"
             value={insights.isLoading ? "…" : hasInsights ? nf.format(totalViews) : "—"}
