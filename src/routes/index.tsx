@@ -209,7 +209,7 @@ function Dashboard() {
   );
 }
 
-function Row({ ok, label }: { ok?: boolean; label: string }) {
+function Row({ ok, label }: { ok: boolean | undefined; label: string }) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-muted-foreground">{label}</span>
