@@ -176,6 +176,70 @@ export async function exchangeCodeForAccount(code: string) {
   return account;
 }
 
+/** Manual connection: validates a user-supplied token against the official Graph API. */
+export async function connectWithAccessToken(rawToken: string) {
+  const env = readMetaEnv();
+  const input = rawToken.trim();
+  if (input.length < 20) throw new Error("Token inválido. Cole o token de acesso completo.");
+
+  let token = input;
+
+  // If app credentials exist, try upgrading to a long-lived token (60 dias).
+  if (env.appSecret) {
+    try {
+      const long = await graph(
+        `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${encodeURIComponent(
+          env.appSecret,
+        )}&access_token=${encodeURIComponent(token)}`,
+      );
+      if (long["access_token"]) token = String(long["access_token"]);
+      var expiresIn = Number(long["expires_in"] ?? 0) || null;
+    } catch {
+      // Token may already be long-lived; segue com o token informado.
+    }
+  }
+
+  const me = await graph(
+    `https://graph.instagram.com/${env.graphVersion}/me?fields=user_id,username,name,profile_picture_url,account_type&access_token=${encodeURIComponent(
+      token,
+    )}`,
+  );
+
+  const igUserId = String(me["user_id"] ?? me["id"] ?? "");
+  if (!igUserId) throw new Error("Não foi possível identificar a conta do Instagram com esse token.");
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: account, error } = await supabaseAdmin
+    .from("instagram_accounts")
+    .upsert(
+      {
+        instagram_user_id: igUserId,
+        username: String(me["username"] ?? "conta"),
+        display_name: (me["name"] as string) ?? null,
+        profile_picture_url: (me["profile_picture_url"] as string) ?? null,
+        account_type: (me["account_type"] as string) ?? null,
+        scopes: DEFAULT_SCOPES,
+        token_expires_at: expiresIn ? new Date(Date.now() + expiresIn * 1000).toISOString() : null,
+        last_sync_at: new Date().toISOString(),
+        status: "connected",
+      },
+      { onConflict: "instagram_user_id" },
+    )
+    .select("id, username")
+    .single();
+  if (error) throw new Error(error.message);
+
+  await supabaseAdmin
+    .from("account_tokens")
+    .upsert({ account_id: account.id, access_token: token }, { onConflict: "account_id" });
+
+  await writeLog("token", "success", `Conta @${account.username} conectada por token manual.`, {
+    account_id: account.id,
+  });
+
+  return { id: account.id, username: account.username };
+}
+
 async function tokenFor(accountId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
