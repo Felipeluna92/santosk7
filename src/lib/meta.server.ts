@@ -352,7 +352,11 @@ export async function publishPostById(postId: string) {
     const caption = [post.caption ?? "", post.hashtags ?? ""].filter(Boolean).join("\n\n");
     let containerId: string;
 
-    if (post.type === "CAROUSEL") {
+    if (post.meta_container_id) {
+      // Retomada: o container já foi criado numa execução anterior.
+      containerId = post.meta_container_id;
+      await waitForContainer(containerId, token, env.graphVersion);
+    } else if (post.type === "CAROUSEL") {
       const urls = (post.carousel_urls ?? []).filter(Boolean);
       if (urls.length < 2) throw new Error("Um carrossel precisa de pelo menos 2 mídias.");
       if (urls.length > 10) throw new Error("Um carrossel aceita no máximo 10 mídias.");
