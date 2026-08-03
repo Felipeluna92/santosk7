@@ -38,12 +38,12 @@ import { MediaUpload } from "@/components/MediaUpload";
 export const Route = createFileRoute("/composer")({
   head: () => ({
     meta: [
-      { title: "Composer — Instagram Studio Solo" },
+      { title: "Publicar — Instagram Studio Solo" },
       {
         name: "description",
         content: "Crie posts, Reels e carrosséis com validação das capacidades oficiais da API.",
       },
-      { property: "og:title", content: "Composer — Instagram Studio Solo" },
+      { property: "og:title", content: "Publicar — Instagram Studio Solo" },
       {
         property: "og:description",
         content: "Crie posts, Reels e carrosséis com validação das capacidades oficiais da API.",
@@ -52,6 +52,7 @@ export const Route = createFileRoute("/composer")({
   }),
   validateSearch: (search: Record<string, unknown>) => ({
     midia: typeof search["midia"] === "string" ? (search["midia"] as string) : undefined,
+    duplicar: typeof search["duplicar"] === "string" ? (search["duplicar"] as string) : undefined,
   }),
   component: Composer,
 });
@@ -68,8 +69,14 @@ const isPublicUrl = (url: string) => {
   }
 };
 
+const fmtLocalInput = (iso: string) => {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 function Composer() {
-  const { midia } = useSearch({ from: "/composer" });
+  const { midia, duplicar } = useSearch({ from: "/composer" });
   const navigate = useNavigate();
   const qc = useQueryClient();
   const accounts = useQuery(accountsQuery);
@@ -83,11 +90,44 @@ function Composer() {
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [extraTimes, setExtraTimes] = useState<string[]>([]);
+  const [newTime, setNewTime] = useState("");
 
   const accountList = accounts.data ?? [];
   const account = accountList.find((a) => a.id === accountId);
   const drafts = (posts.data ?? []).filter((p) => p.status === "draft");
   const carouselUrls = carousel.split(/\s|\n|,/).map((s) => s.trim()).filter(Boolean);
+
+  const loadPost = (p: {
+    type: string;
+    account_id: string | null;
+    media_url: string | null;
+    cover_url: string | null;
+    carousel_urls: string[] | null;
+    caption: string | null;
+    hashtags: string | null;
+  }) => {
+    setType(((p.type as "POST" | "REEL" | "CAROUSEL") ?? "POST"));
+    setAccountId(p.account_id ?? "");
+    setMediaUrl(p.media_url ?? "");
+    setCoverUrl(p.cover_url ?? "");
+    setCarousel((p.carousel_urls ?? []).join("\n"));
+    setCaption(p.caption ?? "");
+    setHashtags(p.hashtags ?? "");
+  };
+
+  const duplicatedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!duplicar || duplicatedRef.current === duplicar) return;
+    const source = (posts.data ?? []).find((p) => p.id === duplicar);
+    if (!source) return;
+    duplicatedRef.current = duplicar;
+    loadPost(source);
+    setScheduledAt("");
+    setExtraTimes([]);
+    toast.info("Post duplicado — escolha os novos horários.");
+  }, [duplicar, posts.data]);
+
 
   const capabilityError = (() => {
     if (!accountList.length) return "Conecte uma conta Instagram profissional para publicar.";
