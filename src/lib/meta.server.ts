@@ -376,10 +376,14 @@ export async function publishPostById(postId: string) {
       if (!isPublicHttpUrl(url))
         throw new Error("Informe uma URL pública e direta da mídia (a Meta precisa baixá-la).");
       if (post.type === "REEL") {
+        const cover = (post as { cover_url?: string | null }).cover_url ?? "";
+        if (cover && !isPublicHttpUrl(cover))
+          throw new Error("A capa do Reel precisa de uma URL pública e direta.");
         containerId = await createContainer(igId, token, env.graphVersion, {
           media_type: "REELS",
           video_url: url,
           caption,
+          ...(cover ? { cover_url: cover } : {}),
         });
         await waitForContainer(containerId, token, env.graphVersion);
       } else {
