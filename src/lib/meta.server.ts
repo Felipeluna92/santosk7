@@ -449,7 +449,7 @@ export async function publishPendingNow() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   // Recupera posts travados em "publicando" (execução interrompida por timeout).
-  const staleCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const staleCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
   await supabaseAdmin
     .from("posts")
     .update({ status: "scheduled" })
@@ -462,11 +462,18 @@ export async function publishPendingNow() {
     .eq("status", "scheduled")
     .lte("scheduled_at", new Date().toISOString())
     .order("scheduled_at", { ascending: true })
-    .limit(3);
+    .limit(10);
 
+  const startedAt = Date.now();
+  const BUDGET_MS = 50_000;
   let ok = 0;
   let failed = 0;
+  let skipped = 0;
   for (const p of pending ?? []) {
+    if (Date.now() - startedAt > BUDGET_MS) {
+      skipped++;
+      continue;
+    }
     try {
       await publishPostById(p.id);
       ok++;
@@ -474,8 +481,12 @@ export async function publishPendingNow() {
       failed++;
     }
   }
-  await writeLog("scheduler", "info", `Publicação de pendentes executada: ${ok} ok, ${failed} falhas.`);
-  return { ok, failed, total: (pending ?? []).length };
+  await writeLog(
+    "scheduler",
+    "info",
+    `Publicação de pendentes executada: ${ok} ok, ${failed} falhas, ${skipped} adiados.`,
+  );
+  return { ok, failed, skipped, total: (pending ?? []).length };
 }
 
 export async function fetchAccountsInsights() {
