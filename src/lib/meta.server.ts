@@ -303,8 +303,11 @@ async function createContainer(
   return String(json["id"]);
 }
 
+/** Marker for failures that should be retried on the next scheduler run. */
+const RETRY_MARK = "__RETRY__";
+
 async function waitForContainer(containerId: string, token: string, version: string) {
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 12; i++) {
     const json = await graph(
       `https://graph.instagram.com/${version}/${containerId}?fields=status_code,status&access_token=${encodeURIComponent(token)}`,
     );
