@@ -98,9 +98,10 @@ function Calendario() {
     >
       <div className="mb-4 flex items-start gap-2 rounded-lg border border-border bg-surface/60 px-3.5 py-2.5 text-[11px] text-muted-foreground">
         <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0 text-warning" />
-        Para publicação automática no horário exato, configure uma função agendada/cron no backend ou serviço
-        externo. Sem cron, use o botão Publicar pendentes agora.
+        A publicação automática roda a cada minuto no site publicado (santosk7.lovable.app). Publique o app
+        para que os agendamentos saiam sozinhos — no preview, use o botão Publicar pendentes agora.
       </div>
+
 
       <div className="grid gap-3 lg:grid-cols-[1.6fr_1fr]">
         <div className="panel p-4">
