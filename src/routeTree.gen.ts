@@ -14,6 +14,7 @@ import { Route as BibliotecaRouteImport } from './routes/biblioteca'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as ComposerRouteImport } from './routes/composer'
 import { Route as ContasRouteImport } from './routes/contas'
+import { Route as HistoricoRouteImport } from './routes/historico'
 import { Route as ApiPublicOauthInstagramCallbackRouteImport } from './routes/api/public/oauth/instagram/callback'
 
 const IndexRoute = IndexRouteImport.update({
@@ -41,6 +42,11 @@ const ContasRoute = ContasRouteImport.update({
   path: '/contas',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistoricoRoute = HistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicOauthInstagramCallbackRoute =
   ApiPublicOauthInstagramCallbackRouteImport.update({
     id: '/api/public/oauth/instagram/callback',
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/calendario': typeof CalendarioRoute
   '/composer': typeof ComposerRoute
   '/contas': typeof ContasRoute
+  '/historico': typeof HistoricoRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/calendario': typeof CalendarioRoute
   '/composer': typeof ComposerRoute
   '/contas': typeof ContasRoute
+  '/historico': typeof HistoricoRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
 }
 export interface FileRoutesById {
@@ -71,6 +79,7 @@ export interface FileRoutesById {
   '/calendario': typeof CalendarioRoute
   '/composer': typeof ComposerRoute
   '/contas': typeof ContasRoute
+  '/historico': typeof HistoricoRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
 }
 export interface FileRouteTypes {
@@ -81,6 +90,7 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/composer'
     | '/contas'
+    | '/historico'
     | '/api/public/oauth/instagram/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/composer'
     | '/contas'
+    | '/historico'
     | '/api/public/oauth/instagram/callback'
   id:
     | '__root__'
@@ -97,6 +108,7 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/composer'
     | '/contas'
+    | '/historico'
     | '/api/public/oauth/instagram/callback'
   fileRoutesById: FileRoutesById
 }
@@ -106,6 +118,7 @@ export interface RootRouteChildren {
   CalendarioRoute: typeof CalendarioRoute
   ComposerRoute: typeof ComposerRoute
   ContasRoute: typeof ContasRoute
+  HistoricoRoute: typeof HistoricoRoute
   ApiPublicOauthInstagramCallbackRoute: typeof ApiPublicOauthInstagramCallbackRoute
 }
 
@@ -146,6 +159,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContasRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/historico': {
+      id: '/historico'
+      path: '/historico'
+      fullPath: '/historico'
+      preLoaderRoute: typeof HistoricoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/oauth/instagram/callback': {
       id: '/api/public/oauth/instagram/callback'
       path: '/api/public/oauth/instagram/callback'
@@ -162,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarioRoute: CalendarioRoute,
   ComposerRoute: ComposerRoute,
   ContasRoute: ContasRoute,
+  HistoricoRoute: HistoricoRoute,
   ApiPublicOauthInstagramCallbackRoute: ApiPublicOauthInstagramCallbackRoute,
 }
 export const routeTree = rootRouteImport
