@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AtSign, Clock, Sparkles, ArrowUpRight, Eye, Users, CheckCircle2 } from "lucide-react";
 
 import { AppShell, DemoBanner } from "@/components/AppShell";
+import { InsightsChart } from "@/components/InsightsChart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
