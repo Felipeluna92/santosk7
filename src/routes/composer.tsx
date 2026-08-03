@@ -284,8 +284,8 @@ function Composer() {
 
         {(["POST", "REEL", "CAROUSEL"] as const).map((t) => (
           <TabsContent key={t} value={t} className="mt-4">
-            <div className="grid gap-3 lg:grid-cols-[1.35fr_1fr]">
-              <div className="panel space-y-4 p-4">
+            <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+              <div className="panel min-w-0 space-y-4 p-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Conta</Label>
                   <Select value={accountId} onValueChange={setAccountId}>
