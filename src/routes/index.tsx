@@ -146,6 +146,9 @@ function Dashboard() {
         </div>
       )}
 
+      <InsightsChart />
+
+
       <div className="mt-3 grid gap-3 lg:grid-cols-3">
         <div className="panel p-5 lg:col-span-2">
           <div className="mb-3 flex items-center justify-between">
