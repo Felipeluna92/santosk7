@@ -553,21 +553,39 @@ export async function fetchInsightsTimeseries(days = 30) {
       );
       followersNow += (me["followers_count"] as number) ?? 0;
 
-      const series = await graph(
-        `https://graph.instagram.com/${env.graphVersion}/me/insights?metric=views,follower_count&period=day&since=${since}&until=${now}&access_token=${encodeURIComponent(token)}`,
-      );
-      const data = (series["data"] as
-        | { name?: string; values?: { value?: number; end_time?: string }[] }[]
-        | undefined) ?? [];
-      for (const metric of data) {
-        const target = metric.name === "views" ? viewsByDay : metric.name === "follower_count" ? gainsByDay : null;
-        if (!target) continue;
-        for (const v of metric.values ?? []) {
-          if (!v.end_time) continue;
-          const day = v.end_time.slice(0, 10);
-          target.set(day, (target.get(day) ?? 0) + (v.value ?? 0));
-          available = true;
+      type MetricRow = { name?: string; values?: { value?: number; end_time?: string }[] };
+
+      const collect = (rows: MetricRow[]) => {
+        for (const metric of rows) {
+          const target =
+            metric.name === "views" ? viewsByDay : metric.name === "follower_count" ? gainsByDay : null;
+          if (!target) continue;
+          for (const v of metric.values ?? []) {
+            if (!v.end_time) continue;
+            const day = v.end_time.slice(0, 10);
+            target.set(day, (target.get(day) ?? 0) + (v.value ?? 0));
+            available = true;
+          }
         }
+      };
+
+      // "views" exige metric_type=time_series nas versões novas da API.
+      try {
+        const viewsSeries = await graph(
+          `https://graph.instagram.com/${env.graphVersion}/me/insights?metric=views&period=day&metric_type=time_series&since=${since}&until=${now}&access_token=${encodeURIComponent(token)}`,
+        );
+        collect((viewsSeries["data"] as MetricRow[] | undefined) ?? []);
+      } catch {
+        // métrica de views indisponível para a conta
+      }
+
+      try {
+        const followerSeries = await graph(
+          `https://graph.instagram.com/${env.graphVersion}/me/insights?metric=follower_count&period=day&since=${since}&until=${now}&access_token=${encodeURIComponent(token)}`,
+        );
+        collect((followerSeries["data"] as MetricRow[] | undefined) ?? []);
+      } catch {
+        // conta sem histórico de seguidores
       }
     } catch {
       // conta sem permissão de insights: ignora
