@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BibliotecaRouteImport } from './routes/biblioteca'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as ComposerRouteImport } from './routes/composer'
+import { Route as ConfiguracaoRouteImport } from './routes/configuracao'
 import { Route as ContasRouteImport } from './routes/contas'
 import { Route as HistoricoRouteImport } from './routes/historico'
 import { Route as LogsRouteImport } from './routes/logs'
@@ -36,6 +37,11 @@ const CalendarioRoute = CalendarioRouteImport.update({
 const ComposerRoute = ComposerRouteImport.update({
   id: '/composer',
   path: '/composer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracaoRoute = ConfiguracaoRouteImport.update({
+  id: '/configuracao',
+  path: '/configuracao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContasRoute = ContasRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/biblioteca': typeof BibliotecaRoute
   '/calendario': typeof CalendarioRoute
   '/composer': typeof ComposerRoute
+  '/configuracao': typeof ConfiguracaoRoute
   '/contas': typeof ContasRoute
   '/historico': typeof HistoricoRoute
   '/logs': typeof LogsRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/biblioteca': typeof BibliotecaRoute
   '/calendario': typeof CalendarioRoute
   '/composer': typeof ComposerRoute
+  '/configuracao': typeof ConfiguracaoRoute
   '/contas': typeof ContasRoute
   '/historico': typeof HistoricoRoute
   '/logs': typeof LogsRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/biblioteca': typeof BibliotecaRoute
   '/calendario': typeof CalendarioRoute
   '/composer': typeof ComposerRoute
+  '/configuracao': typeof ConfiguracaoRoute
   '/contas': typeof ContasRoute
   '/historico': typeof HistoricoRoute
   '/logs': typeof LogsRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/biblioteca'
     | '/calendario'
     | '/composer'
+    | '/configuracao'
     | '/contas'
     | '/historico'
     | '/logs'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/biblioteca'
     | '/calendario'
     | '/composer'
+    | '/configuracao'
     | '/contas'
     | '/historico'
     | '/logs'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/biblioteca'
     | '/calendario'
     | '/composer'
+    | '/configuracao'
     | '/contas'
     | '/historico'
     | '/logs'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   BibliotecaRoute: typeof BibliotecaRoute
   CalendarioRoute: typeof CalendarioRoute
   ComposerRoute: typeof ComposerRoute
+  ConfiguracaoRoute: typeof ConfiguracaoRoute
   ContasRoute: typeof ContasRoute
   HistoricoRoute: typeof HistoricoRoute
   LogsRoute: typeof LogsRoute
@@ -163,6 +176,13 @@ declare module '@tanstack/react-router' {
       path: '/composer'
       fullPath: '/composer'
       preLoaderRoute: typeof ComposerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracao': {
+      id: '/configuracao'
+      path: '/configuracao'
+      fullPath: '/configuracao'
+      preLoaderRoute: typeof ConfiguracaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contas': {
@@ -201,6 +221,7 @@ const rootRouteChildren: RootRouteChildren = {
   BibliotecaRoute: BibliotecaRoute,
   CalendarioRoute: CalendarioRoute,
   ComposerRoute: ComposerRoute,
+  ConfiguracaoRoute: ConfiguracaoRoute,
   ContasRoute: ContasRoute,
   HistoricoRoute: HistoricoRoute,
   LogsRoute: LogsRoute,
