@@ -81,7 +81,7 @@ export function AppShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background/85 px-5 py-3.5 backdrop-blur">
           <div>
-            <h1 className="text-lg font-semibold">{title}</h1>
+            <h1 className="brand-gradient-text text-lg font-semibold">{title}</h1>
             {subtitle ? <p className="text-xs text-muted-foreground">{subtitle}</p> : null}
           </div>
           <div className="flex items-center gap-2">{actions}</div>
