@@ -58,7 +58,13 @@ function MetricCard({
 function Dashboard() {
   const accounts = useQuery(accountsQuery);
   const posts = useQuery(postsQuery);
-  const insights = useQuery({ queryKey: ["accounts-insights"], queryFn: () => getAccountsInsights() });
+  const insights = useQuery({
+    queryKey: ["accounts-insights"],
+    queryFn: () => getAccountsInsights(),
+    staleTime: 0,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
 
   const loading = accounts.isLoading || posts.isLoading;
   const isDemo = !loading && (accounts.data?.length ?? 0) === 0;
