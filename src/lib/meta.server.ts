@@ -303,8 +303,11 @@ async function createContainer(
   return String(json["id"]);
 }
 
+/** Marker for failures that should be retried on the next scheduler run. */
+const RETRY_MARK = "__RETRY__";
+
 async function waitForContainer(containerId: string, token: string, version: string) {
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 12; i++) {
     const json = await graph(
       `https://graph.instagram.com/${version}/${containerId}?fields=status_code,status&access_token=${encodeURIComponent(token)}`,
     );
@@ -315,7 +318,7 @@ async function waitForContainer(containerId: string, token: string, version: str
     }
     await new Promise((r) => setTimeout(r, 3000));
   }
-  throw new Error("Tempo esgotado aguardando a Meta processar o vídeo.");
+  throw new Error(`${RETRY_MARK}Ainda processando a mídia na Meta; vamos tentar de novo em instantes.`);
 }
 
 export async function publishPostById(postId: string) {
@@ -349,7 +352,11 @@ export async function publishPostById(postId: string) {
     const caption = [post.caption ?? "", post.hashtags ?? ""].filter(Boolean).join("\n\n");
     let containerId: string;
 
-    if (post.type === "CAROUSEL") {
+    if (post.meta_container_id) {
+      // Retomada: o container já foi criado numa execução anterior.
+      containerId = post.meta_container_id;
+      await waitForContainer(containerId, token, env.graphVersion);
+    } else if (post.type === "CAROUSEL") {
       const urls = (post.carousel_urls ?? []).filter(Boolean);
       if (urls.length < 2) throw new Error("Um carrossel precisa de pelo menos 2 mídias.");
       if (urls.length > 10) throw new Error("Um carrossel aceita no máximo 10 mídias.");
@@ -420,20 +427,39 @@ export async function publishPostById(postId: string) {
     });
     return { ok: true, mediaId };
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Falha desconhecida ao publicar.";
-    await supabaseAdmin.from("posts").update({ status: "failed", error_message: message }).eq("id", postId);
-    await writeLog("publish", "error", message, { postId });
+    const raw = e instanceof Error ? e.message : "Falha desconhecida ao publicar.";
+    const retriable = raw.startsWith(RETRY_MARK);
+    const message = raw.replace(RETRY_MARK, "");
+    await supabaseAdmin
+      .from("posts")
+      .update({
+        status: retriable ? "scheduled" : "failed",
+        error_message: retriable ? null : message,
+      })
+      .eq("id", postId);
+    await writeLog("publish", retriable ? "warn" : "error", message, { postId });
     throw new Error(message);
   }
 }
 
 export async function publishPendingNow() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  // Recupera posts travados em "publicando" (execução interrompida por timeout).
+  const staleCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  await supabaseAdmin
+    .from("posts")
+    .update({ status: "scheduled" })
+    .eq("status", "publishing")
+    .lt("updated_at", staleCutoff);
+
   const { data: pending } = await supabaseAdmin
     .from("posts")
     .select("id")
     .eq("status", "scheduled")
-    .lte("scheduled_at", new Date().toISOString());
+    .lte("scheduled_at", new Date().toISOString())
+    .order("scheduled_at", { ascending: true })
+    .limit(3);
 
   let ok = 0;
   let failed = 0;
