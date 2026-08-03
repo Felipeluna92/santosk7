@@ -215,20 +215,21 @@ function Composer() {
     <AppShell title="Publicar" subtitle="Criação, duplicação e agendamento em vários horários">
 
       <Tabs value={type} onValueChange={(v) => setType(v as typeof type)}>
-        <TabsList className="bg-surface">
-          <TabsTrigger value="POST">
-            <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> Post
+        <TabsList className="grid w-full grid-cols-4 gap-1 bg-surface px-1 sm:inline-flex sm:w-auto">
+          <TabsTrigger value="POST" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+            <ImageIcon className="mr-1 h-3.5 w-3.5 shrink-0" /> Post
           </TabsTrigger>
-          <TabsTrigger value="REEL">
-            <Film className="mr-1.5 h-3.5 w-3.5" /> Reel
+          <TabsTrigger value="REEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+            <Film className="mr-1 h-3.5 w-3.5 shrink-0" /> Reel
           </TabsTrigger>
-          <TabsTrigger value="CAROUSEL">
-            <Layers className="mr-1.5 h-3.5 w-3.5" /> Carrossel
+          <TabsTrigger value="CAROUSEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+            <Layers className="mr-1 h-3.5 w-3.5 shrink-0" /> Carrossel
           </TabsTrigger>
-          <TabsTrigger value="DRAFTS">
-            <FileText className="mr-1.5 h-3.5 w-3.5" /> Rascunhos
+          <TabsTrigger value="DRAFTS" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+            <FileText className="mr-1 h-3.5 w-3.5 shrink-0" /> Rascunhos
           </TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="DRAFTS" className="mt-4">
           <div className="panel divide-y divide-border">
