@@ -10,33 +10,142 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BibliotecaRouteImport } from './routes/biblioteca'
+import { Route as CalendarioRouteImport } from './routes/calendario'
+import { Route as ComposerRouteImport } from './routes/composer'
+import { Route as ConfiguracaoRouteImport } from './routes/configuracao'
+import { Route as ContasRouteImport } from './routes/contas'
+import { Route as HistoricoRouteImport } from './routes/historico'
+import { Route as LogsRouteImport } from './routes/logs'
+import { Route as ApiPublicOauthInstagramCallbackRouteImport } from './routes/api/public/oauth/instagram/callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BibliotecaRoute = BibliotecaRouteImport.update({
+  id: '/biblioteca',
+  path: '/biblioteca',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalendarioRoute = CalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComposerRoute = ComposerRouteImport.update({
+  id: '/composer',
+  path: '/composer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracaoRoute = ConfiguracaoRouteImport.update({
+  id: '/configuracao',
+  path: '/configuracao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContasRoute = ContasRouteImport.update({
+  id: '/contas',
+  path: '/contas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoricoRoute = HistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogsRoute = LogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicOauthInstagramCallbackRoute =
+  ApiPublicOauthInstagramCallbackRouteImport.update({
+    id: '/api/public/oauth/instagram/callback',
+    path: '/api/public/oauth/instagram/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/biblioteca': typeof BibliotecaRoute
+  '/calendario': typeof CalendarioRoute
+  '/composer': typeof ComposerRoute
+  '/configuracao': typeof ConfiguracaoRoute
+  '/contas': typeof ContasRoute
+  '/historico': typeof HistoricoRoute
+  '/logs': typeof LogsRoute
+  '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/biblioteca': typeof BibliotecaRoute
+  '/calendario': typeof CalendarioRoute
+  '/composer': typeof ComposerRoute
+  '/configuracao': typeof ConfiguracaoRoute
+  '/contas': typeof ContasRoute
+  '/historico': typeof HistoricoRoute
+  '/logs': typeof LogsRoute
+  '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/biblioteca': typeof BibliotecaRoute
+  '/calendario': typeof CalendarioRoute
+  '/composer': typeof ComposerRoute
+  '/configuracao': typeof ConfiguracaoRoute
+  '/contas': typeof ContasRoute
+  '/historico': typeof HistoricoRoute
+  '/logs': typeof LogsRoute
+  '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/biblioteca'
+    | '/calendario'
+    | '/composer'
+    | '/configuracao'
+    | '/contas'
+    | '/historico'
+    | '/logs'
+    | '/api/public/oauth/instagram/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/biblioteca'
+    | '/calendario'
+    | '/composer'
+    | '/configuracao'
+    | '/contas'
+    | '/historico'
+    | '/logs'
+    | '/api/public/oauth/instagram/callback'
+  id:
+    | '__root__'
+    | '/'
+    | '/biblioteca'
+    | '/calendario'
+    | '/composer'
+    | '/configuracao'
+    | '/contas'
+    | '/historico'
+    | '/logs'
+    | '/api/public/oauth/instagram/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BibliotecaRoute: typeof BibliotecaRoute
+  CalendarioRoute: typeof CalendarioRoute
+  ComposerRoute: typeof ComposerRoute
+  ConfiguracaoRoute: typeof ConfiguracaoRoute
+  ContasRoute: typeof ContasRoute
+  HistoricoRoute: typeof HistoricoRoute
+  LogsRoute: typeof LogsRoute
+  ApiPublicOauthInstagramCallbackRoute: typeof ApiPublicOauthInstagramCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +157,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/biblioteca': {
+      id: '/biblioteca'
+      path: '/biblioteca'
+      fullPath: '/biblioteca'
+      preLoaderRoute: typeof BibliotecaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calendario': {
+      id: '/calendario'
+      path: '/calendario'
+      fullPath: '/calendario'
+      preLoaderRoute: typeof CalendarioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/composer': {
+      id: '/composer'
+      path: '/composer'
+      fullPath: '/composer'
+      preLoaderRoute: typeof ComposerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracao': {
+      id: '/configuracao'
+      path: '/configuracao'
+      fullPath: '/configuracao'
+      preLoaderRoute: typeof ConfiguracaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contas': {
+      id: '/contas'
+      path: '/contas'
+      fullPath: '/contas'
+      preLoaderRoute: typeof ContasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/historico': {
+      id: '/historico'
+      path: '/historico'
+      fullPath: '/historico'
+      preLoaderRoute: typeof HistoricoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logs': {
+      id: '/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof LogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/oauth/instagram/callback': {
+      id: '/api/public/oauth/instagram/callback'
+      path: '/api/public/oauth/instagram/callback'
+      fullPath: '/api/public/oauth/instagram/callback'
+      preLoaderRoute: typeof ApiPublicOauthInstagramCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BibliotecaRoute: BibliotecaRoute,
+  CalendarioRoute: CalendarioRoute,
+  ComposerRoute: ComposerRoute,
+  ConfiguracaoRoute: ConfiguracaoRoute,
+  ContasRoute: ContasRoute,
+  HistoricoRoute: HistoricoRoute,
+  LogsRoute: LogsRoute,
+  ApiPublicOauthInstagramCallbackRoute: ApiPublicOauthInstagramCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
