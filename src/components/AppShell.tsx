@@ -73,9 +73,13 @@ export function AppShell({
           })}
         </nav>
 
-        <p className="px-2 text-[10px] leading-relaxed text-muted-foreground">
-          Somente APIs oficiais da Meta. Sem automação de navegador.
-        </p>
+        <div className="flex items-center gap-2.5 rounded-xl border border-sidebar-border bg-surface/50 px-3 py-2.5">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-success" />
+          <div className="leading-tight">
+            <p className="text-xs font-medium">Instagram conectado</p>
+            <p className="text-[10px] text-muted-foreground">Conexão oficial ativa</p>
+          </div>
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
