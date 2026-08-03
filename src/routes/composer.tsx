@@ -215,20 +215,21 @@ function Composer() {
     <AppShell title="Publicar" subtitle="Criação, duplicação e agendamento em vários horários">
 
       <Tabs value={type} onValueChange={(v) => setType(v as typeof type)}>
-        <TabsList className="bg-surface">
-          <TabsTrigger value="POST">
-            <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> Post
+        <TabsList className="grid w-full grid-cols-4 gap-1 bg-surface px-1 sm:inline-flex sm:w-auto">
+          <TabsTrigger value="POST" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+            <ImageIcon className="mr-1 h-3.5 w-3.5 shrink-0" /> Post
           </TabsTrigger>
-          <TabsTrigger value="REEL">
-            <Film className="mr-1.5 h-3.5 w-3.5" /> Reel
+          <TabsTrigger value="REEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+            <Film className="mr-1 h-3.5 w-3.5 shrink-0" /> Reel
           </TabsTrigger>
-          <TabsTrigger value="CAROUSEL">
-            <Layers className="mr-1.5 h-3.5 w-3.5" /> Carrossel
+          <TabsTrigger value="CAROUSEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+            <Layers className="mr-1 h-3.5 w-3.5 shrink-0" /> Carrossel
           </TabsTrigger>
-          <TabsTrigger value="DRAFTS">
-            <FileText className="mr-1.5 h-3.5 w-3.5" /> Rascunhos
+          <TabsTrigger value="DRAFTS" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+            <FileText className="mr-1 h-3.5 w-3.5 shrink-0" /> Rascunhos
           </TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="DRAFTS" className="mt-4">
           <div className="panel divide-y divide-border">
@@ -238,8 +239,9 @@ function Composer() {
               </p>
             ) : (
               drafts.map((d) => (
-                <div key={d.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
+                <div key={d.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1 basis-40">
+
                     <p className="truncate text-[13px] font-medium">{d.caption || "Sem legenda"}</p>
                     <p className="text-[11px] text-muted-foreground">
                       {d.type} · criado em {fmtDate(d.created_at)}
@@ -282,8 +284,8 @@ function Composer() {
 
         {(["POST", "REEL", "CAROUSEL"] as const).map((t) => (
           <TabsContent key={t} value={t} className="mt-4">
-            <div className="grid gap-3 lg:grid-cols-[1.35fr_1fr]">
-              <div className="panel space-y-4 p-4">
+            <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+              <div className="panel min-w-0 space-y-4 p-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Conta</Label>
                   <Select value={accountId} onValueChange={setAccountId}>

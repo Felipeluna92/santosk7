@@ -121,8 +121,8 @@ function Configuracao() {
         </form>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <div className="panel p-4">
+      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="panel min-w-0 p-4">
           <h2 className="mb-3 text-sm font-semibold">Checklist de setup</h2>
           {status.isLoading ? (
             <Skeleton className="h-40 rounded-lg" />
@@ -142,7 +142,7 @@ function Configuracao() {
           )}
         </div>
 
-        <div className="panel p-4">
+        <div className="panel min-w-0 p-4">
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
             <KeyRound className="h-4 w-4" /> Variáveis e secrets
           </h2>
@@ -177,7 +177,7 @@ function Configuracao() {
           </ul>
         </div>
 
-        <div className="panel p-4">
+        <div className="panel min-w-0 p-4">
           <h2 className="mb-2 text-sm font-semibold">Callback URL</h2>
           <div className="flex items-center gap-2 rounded-md border border-border bg-background p-2.5">
             <code className="min-w-0 flex-1 truncate font-mono text-[11px]">{callbackUrl}</code>
@@ -199,7 +199,7 @@ function Configuracao() {
           </p>
         </div>
 
-        <div className="panel p-4">
+        <div className="panel min-w-0 p-4">
           <h2 className="mb-2 text-sm font-semibold">Permissões solicitadas</h2>
           <div className="flex flex-wrap gap-1.5">
             {(status.data?.scopes ?? []).map((s) => (
