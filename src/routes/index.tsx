@@ -39,30 +39,38 @@ export const Route = createFileRoute("/")({
 function Stat({
   label,
   value,
+  hint,
   icon: Icon,
   tone = "text-foreground",
 }: {
   label: string;
   value: string | number;
+  hint?: string;
   icon: typeof AtSign;
   tone?: string;
 }) {
   return (
-    <div className="panel px-4 py-3.5">
+    <div className="panel-glow px-4 py-4">
       <div className="flex items-center justify-between">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="brand-gradient-bg flex h-7 w-7 items-center justify-center rounded-lg">
+          <Icon className="h-3.5 w-3.5 text-primary-foreground" />
+        </span>
       </div>
-      <p className={`mt-2 font-display text-2xl font-semibold ${tone}`}>{value}</p>
+      <p className={`mt-2.5 font-display text-3xl font-semibold tracking-tight ${tone}`}>{value}</p>
+      {hint ? <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
+
+const nf = new Intl.NumberFormat("pt-BR");
 
 function Dashboard() {
   const accounts = useQuery(accountsQuery);
   const posts = useQuery(postsQuery);
   const logs = useQuery(logsQuery);
   const meta = useQuery({ queryKey: ["meta-status"], queryFn: () => getMetaStatus() });
+  const insights = useQuery({ queryKey: ["accounts-insights"], queryFn: () => getAccountsInsights() });
 
   const loading = accounts.isLoading || posts.isLoading;
   const isDemo = !loading && (accounts.data?.length ?? 0) === 0;
@@ -75,6 +83,16 @@ function Dashboard() {
   const scheduled = postList.filter((p) => p.status === "scheduled").length;
   const failed = postList.filter((p) => p.status === "failed");
   const lastSync = accountList.map((a) => a.last_sync_at).filter(Boolean).sort().reverse()[0];
+
+  const today = new Date().toDateString();
+  const postsToday = postList.filter(
+    (p) => p.published_at && new Date(p.published_at).toDateString() === today,
+  ).length;
+
+  const rows = insights.data ?? [];
+  const totalViews = rows.reduce((a, r) => a + (r.views ?? 0), 0);
+  const totalFollowers = rows.reduce((a, r) => a + (r.followers ?? 0), 0);
+  const hasInsights = rows.some((r) => r.followers !== null || r.views !== null);
 
   return (
     <AppShell
@@ -90,25 +108,61 @@ function Dashboard() {
     >
       {isDemo ? <DemoBanner /> : null}
 
+      <div className="panel-glow mb-4 flex flex-wrap items-center justify-between gap-3 px-5 py-5">
+        <div>
+          <h2 className="brand-gradient-text font-display text-2xl font-semibold">Olá, santosk7</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {accountList.length} conta(s) conectada(s) · última sincronização {fmtDate(lastSync)}
+          </p>
+        </div>
+        <Badge className="border-0 bg-primary/15 text-primary">APIs oficiais da Meta</Badge>
+      </div>
+
       {loading ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-[86px] rounded-xl" />
+            <Skeleton key={i} className="h-[110px] rounded-xl" />
           ))}
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Stat label="Contas conectadas" value={accountList.length} icon={AtSign} />
-          <Stat label="Posts publicados" value={published} icon={CheckCircle2} tone="text-success" />
-          <Stat label="Posts agendados" value={scheduled} icon={Clock} tone="text-[color:var(--info)]" />
           <Stat
-            label="Falhas recentes"
-            value={failed.length}
-            icon={AlertTriangle}
-            tone={failed.length ? "text-destructive" : "text-foreground"}
+            label="Views (todas as contas)"
+            value={insights.isLoading ? "…" : hasInsights ? nf.format(totalViews) : "—"}
+            hint={hasInsights ? "Últimas 24h" : "Métrica indisponível para esta conta/permissão"}
+            icon={Eye}
+          />
+          <Stat
+            label="Seguidores"
+            value={insights.isLoading ? "…" : hasInsights ? nf.format(totalFollowers) : "—"}
+            hint={`${rows.length || accountList.length} conta(s)`}
+            icon={Users}
+          />
+          <Stat label="Posts hoje" value={postsToday} hint={`${published} publicados no total`} icon={CheckCircle2} />
+          <Stat
+            label="Na fila"
+            value={scheduled}
+            hint={failed.length ? `${failed.length} falha(s) recente(s)` : "Nenhuma falha"}
+            icon={Clock}
+            tone="text-primary"
           />
         </div>
       )}
+
+      {rows.length > 1 ? (
+        <div className="panel mt-3 p-4">
+          <h2 className="mb-2 text-sm font-semibold">Views por conta</h2>
+          <ul className="space-y-1.5 text-xs">
+            {rows.map((r) => (
+              <li key={r.accountId} className="flex items-center justify-between">
+                <span className="text-muted-foreground">@{r.username}</span>
+                <span>{r.views !== null ? nf.format(r.views) : "—"}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
 
       <div className="mt-4 grid gap-3 lg:grid-cols-3">
         <div className="panel p-4 lg:col-span-2">
