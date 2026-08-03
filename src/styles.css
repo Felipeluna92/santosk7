@@ -163,3 +163,24 @@
 @utility brand-gradient-bg {
   background-image: var(--gradient-brand);
 }
+
+@utility panel-glow {
+  position: relative;
+  background-color: var(--surface);
+  background-image: var(--gradient-glow);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+
+@utility gradient-ring {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    var(--gradient-brand) border-box;
+}
+
+@utility brand-glow {
+  box-shadow: var(--shadow-glow);
+}
