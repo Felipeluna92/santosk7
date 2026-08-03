@@ -69,12 +69,6 @@ const isPublicUrl = (url: string) => {
   }
 };
 
-const fmtLocalInput = (iso: string) => {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
-
 function Composer() {
   const { midia, duplicar } = useSearch({ from: "/composer" });
   const navigate = useNavigate();
@@ -465,7 +459,7 @@ function Composer() {
                     <Save className="h-4 w-4" /> Salvar rascunho
                   </Button>
                   <Button variant="outline" size="sm" disabled={busy} onClick={() => scheduleMutation.mutate()}>
-                    <CalendarClock className="h-4 w-4" /> Agendar
+                    <CalendarClock className="h-4 w-4" /> Agendar{allTimes.length > 1 ? ` (${allTimes.length})` : ""}
                   </Button>
                   <Button size="sm" disabled={busy} onClick={() => publishMutation.mutate()}>
                     <Send className="h-4 w-4" /> Publicar agora
