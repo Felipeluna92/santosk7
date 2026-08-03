@@ -448,3 +448,57 @@ export async function publishPendingNow() {
   await writeLog("scheduler", "info", `Publicação de pendentes executada: ${ok} ok, ${failed} falhas.`);
   return { ok, failed, total: (pending ?? []).length };
 }
+
+export async function fetchAccountsInsights() {
+  const env = readMetaEnv();
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: accounts } = await supabaseAdmin
+    .from("instagram_accounts")
+    .select("id, username")
+    .eq("status", "connected");
+
+  const results: {
+    accountId: string;
+    username: string;
+    followers: number | null;
+    mediaCount: number | null;
+    views: number | null;
+    error?: string;
+  }[] = [];
+
+  for (const acc of accounts ?? []) {
+    try {
+      const token = await tokenFor(acc.id);
+      const me = await graph(
+        `https://graph.instagram.com/${env.graphVersion}/me?fields=followers_count,media_count&access_token=${encodeURIComponent(token)}`,
+      );
+      let views: number | null = null;
+      try {
+        const ins = await graph(
+          `https://graph.instagram.com/${env.graphVersion}/me/insights?metric=views&period=day&metric_type=total_value&access_token=${encodeURIComponent(token)}`,
+        );
+        const arr = (ins["data"] as { total_value?: { value?: number } }[] | undefined) ?? [];
+        views = arr[0]?.total_value?.value ?? null;
+      } catch {
+        views = null;
+      }
+      results.push({
+        accountId: acc.id,
+        username: acc.username,
+        followers: (me["followers_count"] as number) ?? null,
+        mediaCount: (me["media_count"] as number) ?? null,
+        views,
+      });
+    } catch (e) {
+      results.push({
+        accountId: acc.id,
+        username: acc.username,
+        followers: null,
+        mediaCount: null,
+        views: null,
+        error: e instanceof Error ? e.message : "Indisponível",
+      });
+    }
+  }
+  return results;
+}

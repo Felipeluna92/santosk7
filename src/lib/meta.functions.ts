@@ -74,3 +74,8 @@ export const connectManualToken = createServerFn({ method: "POST" })
       return { ok: false as const, username: null, error: message };
     }
   });
+
+export const getAccountsInsights = createServerFn({ method: "GET" }).handler(async () => {
+  const { fetchAccountsInsights } = await import("./meta.server");
+  return fetchAccountsInsights();
+});

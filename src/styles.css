@@ -53,58 +53,60 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --shadow-panel: 0 1px 0 0 oklch(1 0 0 / 4%) inset, 0 16px 40px -24px oklch(0 0 0 / 80%);
-  --shadow-glow: 0 0 0 1px oklch(0.7 0.19 18 / 25%), 0 12px 40px -16px oklch(0.7 0.19 18 / 45%);
+  --shadow-panel: 0 1px 0 0 oklch(1 0 0 / 5%) inset, 0 20px 50px -28px oklch(0 0 0 / 90%);
+  --shadow-glow: 0 0 0 1px oklch(0.62 0.24 300 / 30%), 0 18px 50px -18px oklch(0.62 0.24 300 / 55%);
 }
 
 :root {
   --radius: 0.75rem;
 
-  --background: oklch(0.17 0.012 275);
-  --foreground: oklch(0.96 0.005 275);
-  --surface: oklch(0.21 0.014 275);
-  --surface-2: oklch(0.25 0.016 275);
+  --background: oklch(0.13 0.018 300);
+  --foreground: oklch(0.97 0.006 300);
+  --surface: oklch(0.17 0.024 300);
+  --surface-2: oklch(0.21 0.032 300);
 
-  --card: oklch(0.21 0.014 275);
-  --card-foreground: oklch(0.96 0.005 275);
-  --popover: oklch(0.22 0.015 275);
-  --popover-foreground: oklch(0.96 0.005 275);
+  --card: oklch(0.17 0.024 300);
+  --card-foreground: oklch(0.97 0.006 300);
+  --popover: oklch(0.18 0.026 300);
+  --popover-foreground: oklch(0.97 0.006 300);
 
-  --primary: oklch(0.7 0.19 18);
-  --primary-foreground: oklch(0.16 0.02 18);
+  --primary: oklch(0.62 0.24 300);
+  --primary-foreground: oklch(0.99 0.005 300);
 
-  --secondary: oklch(0.27 0.016 275);
-  --secondary-foreground: oklch(0.93 0.006 275);
+  --secondary: oklch(0.24 0.03 300);
+  --secondary-foreground: oklch(0.95 0.008 300);
 
-  --muted: oklch(0.26 0.014 275);
-  --muted-foreground: oklch(0.68 0.014 275);
+  --muted: oklch(0.22 0.026 300);
+  --muted-foreground: oklch(0.7 0.03 300);
 
-  --accent: oklch(0.29 0.02 275);
-  --accent-foreground: oklch(0.96 0.005 275);
+  --accent: oklch(0.27 0.05 300);
+  --accent-foreground: oklch(0.97 0.006 300);
 
   --destructive: oklch(0.62 0.21 22);
-  --destructive-foreground: oklch(0.98 0.005 275);
-  --success: oklch(0.72 0.15 158);
-  --success-foreground: oklch(0.16 0.02 158);
-  --warning: oklch(0.79 0.15 78);
+  --destructive-foreground: oklch(0.98 0.005 300);
+  --success: oklch(0.74 0.16 158);
+  --success-foreground: oklch(0.15 0.02 158);
+  --warning: oklch(0.8 0.15 78);
   --warning-foreground: oklch(0.18 0.02 78);
-  --info: oklch(0.72 0.12 240);
+  --info: oklch(0.7 0.16 285);
 
-  --border: oklch(0.3 0.014 275);
-  --input: oklch(0.3 0.014 275);
-  --ring: oklch(0.7 0.19 18);
+  --border: oklch(0.27 0.035 300);
+  --input: oklch(0.27 0.035 300);
+  --ring: oklch(0.62 0.24 300);
 
-  --sidebar: oklch(0.185 0.013 275);
-  --sidebar-foreground: oklch(0.9 0.006 275);
-  --sidebar-primary: oklch(0.7 0.19 18);
-  --sidebar-primary-foreground: oklch(0.16 0.02 18);
-  --sidebar-accent: oklch(0.25 0.016 275);
-  --sidebar-accent-foreground: oklch(0.96 0.005 275);
-  --sidebar-border: oklch(0.27 0.014 275);
-  --sidebar-ring: oklch(0.7 0.19 18);
+  --sidebar: oklch(0.115 0.02 300);
+  --sidebar-foreground: oklch(0.92 0.01 300);
+  --sidebar-primary: oklch(0.62 0.24 300);
+  --sidebar-primary-foreground: oklch(0.99 0.005 300);
+  --sidebar-accent: oklch(0.23 0.045 300);
+  --sidebar-accent-foreground: oklch(0.98 0.006 300);
+  --sidebar-border: oklch(0.24 0.032 300);
+  --sidebar-ring: oklch(0.62 0.24 300);
 
-  --gradient-brand: linear-gradient(135deg, oklch(0.74 0.17 55), oklch(0.66 0.22 12) 55%, oklch(0.55 0.2 300));
+  --gradient-brand: linear-gradient(135deg, oklch(0.72 0.19 315), oklch(0.58 0.25 295) 55%, oklch(0.42 0.2 285));
+  --gradient-glow: radial-gradient(120% 120% at 0% 0%, oklch(0.62 0.24 300 / 22%), transparent 60%);
 }
+
 
 .dark {
   color-scheme: dark;
@@ -160,4 +162,25 @@
 
 @utility brand-gradient-bg {
   background-image: var(--gradient-brand);
+}
+
+@utility panel-glow {
+  position: relative;
+  background-color: var(--surface);
+  background-image: var(--gradient-glow);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+
+@utility gradient-ring {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    var(--gradient-brand) border-box;
+}
+
+@utility brand-glow {
+  box-shadow: var(--shadow-glow);
 }
