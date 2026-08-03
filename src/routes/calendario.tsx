@@ -216,6 +216,17 @@ function Calendario() {
                     >
                       <Ban className="h-3 w-3" /> Cancelar
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-[11px] text-destructive hover:text-destructive"
+                      disabled={deleteOne.isPending}
+                      onClick={() => {
+                        if (confirm("Remover este agendamento? Não dá pra desfazer.")) deleteOne.mutate(p.id);
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" /> Remover
+                    </Button>
                   </div>
                 </li>
               ))}
