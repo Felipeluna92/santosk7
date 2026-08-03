@@ -9,9 +9,11 @@ import {
   ScrollText,
   Settings2,
   Instagram,
+  Menu,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 const NAV = [
