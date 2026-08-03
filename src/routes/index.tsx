@@ -87,11 +87,14 @@ function Dashboard() {
     followers: number | null;
     mediaCount: number | null;
     views: number | null;
+    error?: string;
   };
   const rows: InsightRow[] = (insights.data as InsightRow[] | undefined) ?? [];
   const totalViews = rows.reduce((a, r) => a + (r.views ?? 0), 0);
   const totalFollowers = rows.reduce((a, r) => a + (r.followers ?? 0), 0);
-  const hasInsights = rows.some((r) => r.followers !== null || r.views !== null);
+  const hasViews = rows.some((r) => r.views !== null);
+  const hasFollowers = rows.some((r) => r.followers !== null);
+  const viewsError = rows.find((r) => r.views === null && r.error)?.error;
 
   return (
     <AppShell title="Painel" subtitle="Sua operação em um único fluxo">
@@ -127,13 +130,13 @@ function Dashboard() {
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <MetricCard
             label="Views registradas"
-            value={insights.isLoading ? "…" : hasInsights ? nf.format(totalViews) : "—"}
-            hint={hasInsights ? "Últimas 24 horas" : "Métrica indisponível para esta conta"}
+            value={insights.isLoading ? "…" : hasViews ? nf.format(totalViews) : "—"}
+            hint={hasViews ? "Últimas 24 horas" : viewsError ?? "Token sem permissão de insights"}
             icon={Eye}
           />
           <MetricCard
             label="Seguidores"
-            value={insights.isLoading ? "…" : hasInsights ? nf.format(totalFollowers) : "—"}
+            value={insights.isLoading ? "…" : hasFollowers ? nf.format(totalFollowers) : "—"}
             hint={`${rows.length || accountList.length} conta(s) monitorada(s)`}
             icon={Users}
           />
