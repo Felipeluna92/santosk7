@@ -239,8 +239,9 @@ function Composer() {
               </p>
             ) : (
               drafts.map((d) => (
-                <div key={d.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
+                <div key={d.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1 basis-40">
+
                     <p className="truncate text-[13px] font-medium">{d.caption || "Sem legenda"}</p>
                     <p className="text-[11px] text-muted-foreground">
                       {d.type} · criado em {fmtDate(d.created_at)}
