@@ -396,6 +396,64 @@ function Composer() {
                   </div>
                 </div>
 
+                <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-xs">Repetir este conteúdo em outros horários</Label>
+                    <span className="text-[11px] text-muted-foreground">
+                      {allTimes.length} agendamento(s)
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Mesma legenda, hashtags, mídia e capa — uma cópia agendada para cada horário.
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      type="datetime-local"
+                      value={newTime}
+                      onChange={(e) => setNewTime(e.target.value)}
+                      className="bg-background"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        if (!newTime) return;
+                        if (allTimes.includes(newTime)) {
+                          toast.error("Esse horário já está na lista.");
+                          return;
+                        }
+                        setExtraTimes((prev) => [...prev, newTime]);
+                        setNewTime("");
+                      }}
+                    >
+                      <Plus className="h-4 w-4" /> Adicionar
+                    </Button>
+                  </div>
+                  {extraTimes.length ? (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {extraTimes.map((t) => (
+                        <span
+                          key={t}
+                          className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px]"
+                        >
+                          {fmtDate(new Date(t).toISOString())}
+                          <button
+                            type="button"
+                            aria-label="Remover horário"
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() => setExtraTimes((prev) => prev.filter((x) => x !== t))}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
+
+
                 {capabilityError || mediaError ? (
                   <div className="rounded-md border border-warning/30 bg-warning/10 p-2.5 text-[11px] text-warning">
                     {capabilityError ?? mediaError}
