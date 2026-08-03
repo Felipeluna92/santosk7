@@ -393,6 +393,8 @@ export async function publishPostById(postId: string) {
           caption,
           ...(cover ? { cover_url: cover } : {}),
         });
+        // Guarda o container antes de esperar: se o tempo acabar, a próxima execução retoma daqui.
+        await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
         await waitForContainer(containerId, token, env.graphVersion);
       } else {
         containerId = await createContainer(igId, token, env.graphVersion, {
