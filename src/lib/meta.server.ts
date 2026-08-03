@@ -427,20 +427,39 @@ export async function publishPostById(postId: string) {
     });
     return { ok: true, mediaId };
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Falha desconhecida ao publicar.";
-    await supabaseAdmin.from("posts").update({ status: "failed", error_message: message }).eq("id", postId);
-    await writeLog("publish", "error", message, { postId });
+    const raw = e instanceof Error ? e.message : "Falha desconhecida ao publicar.";
+    const retriable = raw.startsWith(RETRY_MARK);
+    const message = raw.replace(RETRY_MARK, "");
+    await supabaseAdmin
+      .from("posts")
+      .update({
+        status: retriable ? "scheduled" : "failed",
+        error_message: retriable ? null : message,
+      })
+      .eq("id", postId);
+    await writeLog("publish", retriable ? "warn" : "error", message, { postId });
     throw new Error(message);
   }
 }
 
 export async function publishPendingNow() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  // Recupera posts travados em "publicando" (execução interrompida por timeout).
+  const staleCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  await supabaseAdmin
+    .from("posts")
+    .update({ status: "scheduled" })
+    .eq("status", "publishing")
+    .lt("updated_at", staleCutoff);
+
   const { data: pending } = await supabaseAdmin
     .from("posts")
     .select("id")
     .eq("status", "scheduled")
-    .lte("scheduled_at", new Date().toISOString());
+    .lte("scheduled_at", new Date().toISOString())
+    .order("scheduled_at", { ascending: true })
+    .limit(3);
 
   let ok = 0;
   let failed = 0;
