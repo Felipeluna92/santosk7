@@ -306,8 +306,8 @@ async function createContainer(
 /** Marker for failures that should be retried on the next scheduler run. */
 const RETRY_MARK = "__RETRY__";
 
-async function waitForContainer(containerId: string, token: string, version: string) {
-  for (let i = 0; i < 12; i++) {
+async function waitForContainer(containerId: string, token: string, version: string, tries = 6) {
+  for (let i = 0; i < tries; i++) {
     const json = await graph(
       `https://graph.instagram.com/${version}/${containerId}?fields=status_code,status&access_token=${encodeURIComponent(token)}`,
     );
@@ -316,10 +316,11 @@ async function waitForContainer(containerId: string, token: string, version: str
     if (status === "ERROR" || status === "EXPIRED") {
       throw new Error(`A Meta não conseguiu processar a mídia (${String(json["status"] ?? status)}).`);
     }
-    await new Promise((r) => setTimeout(r, 3000));
+    await new Promise((r) => setTimeout(r, 2500));
   }
   throw new Error(`${RETRY_MARK}Ainda processando a mídia na Meta; vamos tentar de novo em instantes.`);
 }
+
 
 export async function publishPostById(postId: string) {
   const env = readMetaEnv();
@@ -392,6 +393,8 @@ export async function publishPostById(postId: string) {
           caption,
           ...(cover ? { cover_url: cover } : {}),
         });
+        // Guarda o container antes de esperar: se o tempo acabar, a próxima execução retoma daqui.
+        await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
         await waitForContainer(containerId, token, env.graphVersion);
       } else {
         containerId = await createContainer(igId, token, env.graphVersion, {
@@ -446,7 +449,7 @@ export async function publishPendingNow() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   // Recupera posts travados em "publicando" (execução interrompida por timeout).
-  const staleCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const staleCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
   await supabaseAdmin
     .from("posts")
     .update({ status: "scheduled" })
@@ -459,11 +462,18 @@ export async function publishPendingNow() {
     .eq("status", "scheduled")
     .lte("scheduled_at", new Date().toISOString())
     .order("scheduled_at", { ascending: true })
-    .limit(3);
+    .limit(10);
 
+  const startedAt = Date.now();
+  const BUDGET_MS = 50_000;
   let ok = 0;
   let failed = 0;
+  let skipped = 0;
   for (const p of pending ?? []) {
+    if (Date.now() - startedAt > BUDGET_MS) {
+      skipped++;
+      continue;
+    }
     try {
       await publishPostById(p.id);
       ok++;
@@ -471,8 +481,12 @@ export async function publishPendingNow() {
       failed++;
     }
   }
-  await writeLog("scheduler", "info", `Publicação de pendentes executada: ${ok} ok, ${failed} falhas.`);
-  return { ok, failed, total: (pending ?? []).length };
+  await writeLog(
+    "scheduler",
+    "info",
+    `Publicação de pendentes executada: ${ok} ok, ${failed} falhas, ${skipped} adiados.`,
+  );
+  return { ok, failed, skipped, total: (pending ?? []).length };
 }
 
 export async function fetchAccountsInsights() {
