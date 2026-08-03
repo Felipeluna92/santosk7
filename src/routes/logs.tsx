@@ -27,7 +27,7 @@ export const Route = createFileRoute("/logs")({
       },
     ],
   }),
-  component: Logs;
+  component: Logs,
 });
 
 const LEVEL_TONE: Record<string, string> = {
