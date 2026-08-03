@@ -1,7 +1,7 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { AtSign, RefreshCw, LinkIcon, Trash2, ShieldCheck } from "lucide-react";
+import { AtSign, RefreshCw, KeyRound, Trash2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell, DemoBanner, EmptyState } from "@/components/AppShell";
@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { accountsQuery, fmtDate } from "@/lib/data";
 import { demoAccounts } from "@/lib/demo";
-import { disconnectAccount, getAuthorizationUrl, syncAccount } from "@/lib/meta.functions";
+import { disconnectAccount, syncAccount } from "@/lib/meta.functions";
 
 export const Route = createFileRoute("/contas")({
   head: () => ({
@@ -43,18 +43,6 @@ function ContasPage() {
     if (search.conectado) toast.success(`Conta @${search.conectado} conectada.`);
   }, [search.conectado]);
 
-  const connect = useMutation({
-    mutationFn: () => getAuthorizationUrl({ data: {} }),
-    onSuccess: (res) => {
-      if (!res.url) {
-        toast.error(res.error ?? "Não foi possível gerar a URL de autorização.");
-        return;
-      }
-      window.location.href = res.url;
-    },
-    onError: () => toast.error("Falha ao iniciar o fluxo OAuth."),
-  });
-
   const sync = useMutation({
     mutationFn: (accountId: string) => syncAccount({ data: { accountId } }),
     onSuccess: () => {
@@ -79,10 +67,12 @@ function ContasPage() {
   return (
     <AppShell
       title="Contas"
-      subtitle="Contas Instagram Business ou Creator conectadas via OAuth oficial"
+      subtitle="Contas Instagram Business ou Creator conectadas por token de acesso oficial"
       actions={
-        <Button size="sm" onClick={() => connect.mutate()} disabled={connect.isPending}>
-          <LinkIcon className="h-4 w-4" /> Conectar Instagram
+        <Button size="sm" asChild>
+          <Link to="/configuracao">
+            <KeyRound className="h-4 w-4" /> Conectar por token
+          </Link>
         </Button>
       }
     >
@@ -97,7 +87,7 @@ function ContasPage() {
         <EmptyState
           icon={AtSign}
           title="Nenhuma conta conectada"
-          description="Conecte uma conta Instagram Business ou Creator pelo fluxo oficial da Meta para publicar e agendar."
+          description="Cole o token de acesso oficial da Meta na tela de Configuração para conectar sua conta Instagram Business ou Creator."
           action={<Button onClick={() => connect.mutate()}>Conectar Instagram</Button>}
         />
       ) : (
