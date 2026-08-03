@@ -14,7 +14,13 @@ function shortDay(day: string) {
 }
 
 export function InsightsChart() {
-  const q = useQuery({ queryKey: ["insights-timeseries"], queryFn: () => getInsightsTimeseries() });
+  const q = useQuery({
+    queryKey: ["insights-timeseries"],
+    queryFn: () => getInsightsTimeseries(),
+    staleTime: 0,
+    refetchInterval: 300_000,
+    refetchOnWindowFocus: true,
+  });
 
   const points: Point[] = (q.data?.points as Point[] | undefined) ?? [];
   const available = Boolean(q.data?.available) && points.length > 1;
