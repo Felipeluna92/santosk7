@@ -14,7 +14,235 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      account_tokens: {
+        Row: {
+          access_token: string
+          account_id: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          account_id: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          account_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_tokens_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "instagram_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instagram_accounts: {
+        Row: {
+          account_type: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          instagram_user_id: string
+          last_sync_at: string | null
+          profile_picture_url: string | null
+          scopes: string[]
+          status: string
+          token_expires_at: string | null
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          account_type?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          instagram_user_id: string
+          last_sync_at?: string | null
+          profile_picture_url?: string | null
+          scopes?: string[]
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          account_type?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          instagram_user_id?: string
+          last_sync_at?: string | null
+          profile_picture_url?: string | null
+          scopes?: string[]
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      logs: {
+        Row: {
+          area: string
+          created_at: string
+          id: string
+          level: string
+          message: string
+          metadata: Json
+        }
+        Insert: {
+          area: string
+          created_at?: string
+          id?: string
+          level?: string
+          message: string
+          metadata?: Json
+        }
+        Update: {
+          area?: string
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json
+        }
+        Relationships: []
+      }
+      media_items: {
+        Row: {
+          created_at: string
+          favorite: boolean
+          id: string
+          media_type: string
+          public_url: string
+          tags: string[]
+          thumbnail_url: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          favorite?: boolean
+          id?: string
+          media_type?: string
+          public_url: string
+          tags?: string[]
+          thumbnail_url?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          favorite?: boolean
+          id?: string
+          media_type?: string
+          public_url?: string
+          tags?: string[]
+          thumbnail_url?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          account_id: string | null
+          caption: string | null
+          carousel_urls: string[]
+          created_at: string
+          error_message: string | null
+          hashtags: string | null
+          id: string
+          media_url: string | null
+          meta_container_id: string | null
+          meta_media_id: string | null
+          published_at: string | null
+          scheduled_at: string | null
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          caption?: string | null
+          carousel_urls?: string[]
+          created_at?: string
+          error_message?: string | null
+          hashtags?: string | null
+          id?: string
+          media_url?: string | null
+          meta_container_id?: string | null
+          meta_media_id?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          caption?: string | null
+          carousel_urls?: string[]
+          created_at?: string
+          error_message?: string | null
+          hashtags?: string | null
+          id?: string
+          media_url?: string | null
+          meta_container_id?: string | null
+          meta_media_id?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settings: {
+        Row: {
+          created_at: string
+          id: string
+          locale: string
+          meta_graph_version: string
+          oauth_mode: string
+          setup_completed: boolean
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          locale?: string
+          meta_graph_version?: string
+          oauth_mode?: string
+          setup_completed?: boolean
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          locale?: string
+          meta_graph_version?: string
+          oauth_mode?: string
+          setup_completed?: boolean
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
