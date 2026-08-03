@@ -150,11 +150,24 @@ function Historico() {
                     {p.error_message ?? ""}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button asChild size="sm" variant="secondary" className="h-7 text-[11px]">
-                      <Link to="/composer" search={{ duplicar: p.id }}>
-                        <Copy className="h-3 w-3" /> Duplicar
-                      </Link>
-                    </Button>
+                    <div className="flex justify-end gap-1.5">
+                      <Button asChild size="sm" variant="secondary" className="h-7 text-[11px]">
+                        <Link to="/composer" search={{ duplicar: p.id }}>
+                          <Copy className="h-3 w-3" /> Duplicar
+                        </Link>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-[11px] text-destructive hover:text-destructive"
+                        disabled={deleteOne.isPending}
+                        onClick={() => {
+                          if (confirm("Remover este post? Não dá pra desfazer.")) deleteOne.mutate(p.id);
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
