@@ -21,6 +21,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { accountsQuery, postsQuery, POST_STATUS, fmtDate } from "@/lib/data";
 import { publishPost } from "@/lib/meta.functions";
+import { MediaUpload } from "@/components/MediaUpload";
 
 export const Route = createFileRoute("/composer")({
   head: () => ({
@@ -66,6 +67,7 @@ function Composer() {
   const [accountId, setAccountId] = useState<string>("");
   const [mediaUrl, setMediaUrl] = useState(midia ?? "");
   const [carousel, setCarousel] = useState("");
+  const [coverUrl, setCoverUrl] = useState("");
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
@@ -103,6 +105,7 @@ function Composer() {
     caption: caption || null,
     hashtags: hashtags || null,
     media_url: type === "CAROUSEL" ? null : mediaUrl || null,
+    cover_url: type === "REEL" ? coverUrl || null : null,
     carousel_urls: type === "CAROUSEL" ? carouselUrls : [],
     scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
   });
@@ -203,6 +206,7 @@ function Composer() {
                         setType((d.type as typeof type) ?? "POST");
                         setAccountId(d.account_id ?? "");
                         setMediaUrl(d.media_url ?? "");
+                        setCoverUrl(d.cover_url ?? "");
                         setCarousel((d.carousel_urls ?? []).join("\n"));
                         setCaption(d.caption ?? "");
                         setHashtags(d.hashtags ?? "");
@@ -255,23 +259,45 @@ function Composer() {
                     />
                   </div>
                 ) : (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">
-                      URL pública da mídia ({t === "REEL" ? "vídeo .mp4" : "imagem .jpg/.png"})
-                    </Label>
-                    <Input
+                  <div className="space-y-3">
+                    <MediaUpload
+                      label={t === "REEL" ? "Vídeo do Reel" : "Imagem do post"}
+                      kind={t === "REEL" ? "video" : "image"}
                       value={mediaUrl}
-                      onChange={(e) => setMediaUrl(e.target.value)}
-                      placeholder="https://cdn.exemplo.com/arquivo.jpg"
-                      className="bg-background font-mono text-xs"
+                      onChange={setMediaUrl}
+                      hint={
+                        t === "REEL"
+                          ? "MP4 ou MOV, até 300 MB. Gera uma URL pública HTTPS automaticamente."
+                          : "JPG ou PNG, até 8 MB. Gera uma URL pública HTTPS automaticamente."
+                      }
                     />
+                    {t === "REEL" ? (
+                      <MediaUpload
+                        label="Capa do Reel"
+                        kind="image"
+                        optional
+                        value={coverUrl}
+                        onChange={setCoverUrl}
+                        hint="JPG ou PNG. Sem capa, a Meta usa a miniatura automática do vídeo (cover_url)."
+                      />
+                    ) : null}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Ou cole uma URL pública já hospedada</Label>
+                      <Input
+                        value={mediaUrl}
+                        onChange={(e) => setMediaUrl(e.target.value)}
+                        placeholder="https://cdn.exemplo.com/arquivo.jpg"
+                        className="bg-background font-mono text-xs"
+                      />
+                    </div>
                   </div>
                 )}
 
                 <p className="flex gap-1.5 rounded-md bg-secondary/60 p-2.5 text-[11px] text-muted-foreground">
                   <Info className="mt-px h-3.5 w-3.5 shrink-0" />
-                  A Meta baixa o arquivo diretamente da URL informada. Upload local não é suportado pela API
-                  oficial — hospede a mídia em uma URL pública e direta.
+                  Arquivos enviados aqui ficam no armazenamento do app e recebem uma URL HTTPS pública e
+                  permanente — é essa URL que a API oficial da Meta baixa como image_url, video_url ou
+                  cover_url.
                 </p>
 
                 <div className="space-y-1.5">
@@ -347,7 +373,13 @@ function Composer() {
                         <Layers className="h-6 w-6 text-muted-foreground" />
                       )
                     ) : t === "REEL" ? (
-                      <Film className="h-6 w-6 text-muted-foreground" />
+                      coverUrl ? (
+                        <img src={coverUrl} alt="Capa do Reel" className="h-full w-full object-cover" />
+                      ) : mediaUrl ? (
+                        <video src={mediaUrl} className="h-full w-full object-cover" muted playsInline controls />
+                      ) : (
+                        <Film className="h-6 w-6 text-muted-foreground" />
+                      )
                     ) : mediaUrl ? (
                       <img src={mediaUrl} alt="Prévia do post" className="h-full w-full object-cover" />
                     ) : (

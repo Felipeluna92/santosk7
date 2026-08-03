@@ -153,6 +153,7 @@ export type Database = {
           account_id: string | null
           caption: string | null
           carousel_urls: string[]
+          cover_url: string | null
           created_at: string
           error_message: string | null
           hashtags: string | null
@@ -170,6 +171,7 @@ export type Database = {
           account_id?: string | null
           caption?: string | null
           carousel_urls?: string[]
+          cover_url?: string | null
           created_at?: string
           error_message?: string | null
           hashtags?: string | null
@@ -187,6 +189,7 @@ export type Database = {
           account_id?: string | null
           caption?: string | null
           carousel_urls?: string[]
+          cover_url?: string | null
           created_at?: string
           error_message?: string | null
           hashtags?: string | null

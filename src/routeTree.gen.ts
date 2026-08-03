@@ -17,6 +17,7 @@ import { Route as ConfiguracaoRouteImport } from './routes/configuracao'
 import { Route as ContasRouteImport } from './routes/contas'
 import { Route as HistoricoRouteImport } from './routes/historico'
 import { Route as LogsRouteImport } from './routes/logs'
+import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media/$'
 import { Route as ApiPublicOauthInstagramCallbackRouteImport } from './routes/api/public/oauth/instagram/callback'
 
 const IndexRoute = IndexRouteImport.update({
@@ -59,6 +60,11 @@ const LogsRoute = LogsRouteImport.update({
   path: '/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMediaSplatRoute = ApiPublicMediaSplatRouteImport.update({
+  id: '/api/public/media/$',
+  path: '/api/public/media/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicOauthInstagramCallbackRoute =
   ApiPublicOauthInstagramCallbackRouteImport.update({
     id: '/api/public/oauth/instagram/callback',
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/contas': typeof ContasRoute
   '/historico': typeof HistoricoRoute
   '/logs': typeof LogsRoute
+  '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/contas': typeof ContasRoute
   '/historico': typeof HistoricoRoute
   '/logs': typeof LogsRoute
+  '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
 }
 export interface FileRoutesById {
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   '/contas': typeof ContasRoute
   '/historico': typeof HistoricoRoute
   '/logs': typeof LogsRoute
+  '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
 }
 export interface FileRouteTypes {
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/contas'
     | '/historico'
     | '/logs'
+    | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/contas'
     | '/historico'
     | '/logs'
+    | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
   id:
     | '__root__'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/contas'
     | '/historico'
     | '/logs'
+    | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
   fileRoutesById: FileRoutesById
 }
@@ -145,6 +157,7 @@ export interface RootRouteChildren {
   ContasRoute: typeof ContasRoute
   HistoricoRoute: typeof HistoricoRoute
   LogsRoute: typeof LogsRoute
+  ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
   ApiPublicOauthInstagramCallbackRoute: typeof ApiPublicOauthInstagramCallbackRoute
 }
 
@@ -206,6 +219,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LogsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/media/$': {
+      id: '/api/public/media/$'
+      path: '/api/public/media/$'
+      fullPath: '/api/public/media/$'
+      preLoaderRoute: typeof ApiPublicMediaSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/oauth/instagram/callback': {
       id: '/api/public/oauth/instagram/callback'
       path: '/api/public/oauth/instagram/callback'
@@ -225,18 +245,9 @@ const rootRouteChildren: RootRouteChildren = {
   ContasRoute: ContasRoute,
   HistoricoRoute: HistoricoRoute,
   LogsRoute: LogsRoute,
+  ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
   ApiPublicOauthInstagramCallbackRoute: ApiPublicOauthInstagramCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
