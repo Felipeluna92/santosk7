@@ -502,3 +502,69 @@ export async function fetchAccountsInsights() {
   }
   return results;
 }
+
+export async function fetchInsightsTimeseries(days = 30) {
+  const env = readMetaEnv();
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: accounts } = await supabaseAdmin
+    .from("instagram_accounts")
+    .select("id, username")
+    .eq("status", "connected");
+
+  const now = Math.floor(Date.now() / 1000);
+  const since = now - days * 86400;
+
+  const viewsByDay = new Map<string, number>();
+  const gainsByDay = new Map<string, number>();
+  let followersNow = 0;
+  let available = false;
+
+  for (const acc of accounts ?? []) {
+    try {
+      const token = await tokenFor(acc.id);
+      const me = await graph(
+        `https://graph.instagram.com/${env.graphVersion}/me?fields=followers_count&access_token=${encodeURIComponent(token)}`,
+      );
+      followersNow += (me["followers_count"] as number) ?? 0;
+
+      const series = await graph(
+        `https://graph.instagram.com/${env.graphVersion}/me/insights?metric=views,follower_count&period=day&since=${since}&until=${now}&access_token=${encodeURIComponent(token)}`,
+      );
+      const data = (series["data"] as
+        | { name?: string; values?: { value?: number; end_time?: string }[] }[]
+        | undefined) ?? [];
+      for (const metric of data) {
+        const target = metric.name === "views" ? viewsByDay : metric.name === "follower_count" ? gainsByDay : null;
+        if (!target) continue;
+        for (const v of metric.values ?? []) {
+          if (!v.end_time) continue;
+          const day = v.end_time.slice(0, 10);
+          target.set(day, (target.get(day) ?? 0) + (v.value ?? 0));
+          available = true;
+        }
+      }
+    } catch {
+      // conta sem permissão de insights: ignora
+    }
+  }
+
+  const dayKeys = Array.from(new Set([...viewsByDay.keys(), ...gainsByDay.keys()])).sort();
+
+  // Reconstrói o total de seguidores retroativamente a partir do total atual.
+  const followersByDay = new Map<string, number>();
+  let running = followersNow;
+  for (let i = dayKeys.length - 1; i >= 0; i--) {
+    const key = dayKeys[i]!;
+    followersByDay.set(key, running);
+    running -= gainsByDay.get(key) ?? 0;
+  }
+
+  return {
+    available,
+    points: dayKeys.map((day) => ({
+      day,
+      views: viewsByDay.get(day) ?? 0,
+      followers: followersByDay.get(day) ?? followersNow,
+    })),
+  };
+}

@@ -79,3 +79,8 @@ export const getAccountsInsights = createServerFn({ method: "GET" }).handler(asy
   const { fetchAccountsInsights } = await import("./meta.server");
   return fetchAccountsInsights();
 });
+
+export const getInsightsTimeseries = createServerFn({ method: "GET" }).handler(async () => {
+  const { fetchInsightsTimeseries } = await import("./meta.server");
+  return fetchInsightsTimeseries(30);
+});
