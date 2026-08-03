@@ -259,18 +259,26 @@ function Composer() {
                       size="sm"
                       variant="secondary"
                       onClick={() => {
-                        setType((d.type as typeof type) ?? "POST");
-                        setAccountId(d.account_id ?? "");
-                        setMediaUrl(d.media_url ?? "");
-                        setCoverUrl(d.cover_url ?? "");
-                        setCarousel((d.carousel_urls ?? []).join("\n"));
-                        setCaption(d.caption ?? "");
-                        setHashtags(d.hashtags ?? "");
+                        loadPost(d);
                         toast.info("Rascunho carregado no editor.");
                       }}
                     >
                       Carregar
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        loadPost(d);
+                        setScheduledAt("");
+                        setExtraTimes([]);
+                        setType(((d.type as typeof type) ?? "POST"));
+                        toast.info("Cópia criada — escolha os novos horários.");
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5" /> Duplicar
+                    </Button>
+
                   </div>
                 </div>
               ))
