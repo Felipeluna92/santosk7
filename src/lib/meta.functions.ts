@@ -56,3 +56,21 @@ export const disconnectAccount = createServerFn({ method: "POST" })
     await writeLog("accounts", "warn", "Conta removida do app e token descartado.");
     return { ok: true };
   });
+
+export const connectManualToken = createServerFn({ method: "POST" })
+  .inputValidator((data: { token: string }) => {
+    const token = typeof data?.token === "string" ? data.token.trim() : "";
+    if (token.length < 20 || token.length > 1000) throw new Error("Token inválido.");
+    return { token };
+  })
+  .handler(async ({ data }) => {
+    const { connectWithAccessToken, writeLog } = await import("./meta.server");
+    try {
+      const account = await connectWithAccessToken(data.token);
+      return { ok: true as const, username: account.username, error: null };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Falha ao validar o token.";
+      await writeLog("token", "error", message);
+      return { ok: false as const, username: null, error: message };
+    }
+  });

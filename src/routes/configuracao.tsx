@@ -1,14 +1,15 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { CheckCircle2, Circle, Copy, LinkIcon, ShieldAlert, KeyRound } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { CheckCircle2, Circle, Copy, ShieldAlert, KeyRound, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { accountsQuery } from "@/lib/data";
-import { getAuthorizationUrl, getMetaStatus } from "@/lib/meta.functions";
+import { connectManualToken, getMetaStatus } from "@/lib/meta.functions";
 
 export const Route = createFileRoute("/configuracao")({
   head: () => ({
@@ -41,6 +42,8 @@ const ENV_VARS = [
 
 function Configuracao() {
   const { erro } = useSearch({ from: "/configuracao" });
+  const queryClient = useQueryClient();
+  const [token, setToken] = useState("");
   const status = useQuery({ queryKey: ["meta-status"], queryFn: () => getMetaStatus() });
   const accounts = useQuery(accountsQuery);
 
@@ -48,15 +51,18 @@ function Configuracao() {
     if (erro) toast.error(erro);
   }, [erro]);
 
-  const connect = useMutation({
-    mutationFn: () => getAuthorizationUrl({ data: {} }),
+  const connectToken = useMutation({
+    mutationFn: (value: string) => connectManualToken({ data: { token: value } }),
     onSuccess: (res) => {
-      if (!res.url) {
-        toast.error(res.error ?? "Não foi possível gerar a URL de autorização.");
+      if (!res.ok) {
+        toast.error(res.error ?? "Não foi possível validar o token.");
         return;
       }
-      window.location.href = res.url;
+      setToken("");
+      toast.success(`Conta @${res.username} conectada com sucesso.`);
+      queryClient.invalidateQueries();
     },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Falha ao conectar."),
   });
 
   const callbackUrl =
@@ -69,19 +75,52 @@ function Configuracao() {
     { label: "Configurar a redirect URI no app Meta", done: Boolean(status.data?.redirectUri) },
     { label: "Confirmar conta Instagram Business ou Creator", done: (accounts.data?.length ?? 0) > 0 },
     { label: "Solicitar as permissões necessárias", done: (accounts.data?.length ?? 0) > 0 },
-    { label: "Conectar via OAuth oficial", done: (accounts.data?.length ?? 0) > 0 },
+    { label: "Conectar informando o token de acesso", done: (accounts.data?.length ?? 0) > 0 },
   ];
 
   return (
     <AppShell
       title="Configuração Meta"
       subtitle="Fluxo oficial Instagram API with Instagram Login"
-      actions={
-        <Button size="sm" onClick={() => connect.mutate()} disabled={connect.isPending || !status.data?.ready}>
-          <LinkIcon className="h-4 w-4" /> Conectar Instagram
-        </Button>
-      }
     >
+      <div className="panel mb-3 p-4">
+        <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+          <Lock className="h-4 w-4" /> Token de acesso do Instagram
+        </h2>
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          Cole aqui o token de acesso gerado no painel da Meta (Instagram → API setup → Generate token). O
+          token é enviado apenas para o backend, validado no endpoint oficial{" "}
+          <code className="font-mono">graph.instagram.com/me</code> e guardado com segurança no servidor —
+          nunca fica no navegador nem no localStorage.
+        </p>
+        <form
+          className="flex flex-col gap-2 sm:flex-row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const value = token.trim();
+            if (value.length < 20) {
+              toast.error("Cole o token de acesso completo.");
+              return;
+            }
+            connectToken.mutate(value);
+          }}
+        >
+          <Input
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="IGAA..."
+            className="font-mono text-[12px]"
+            maxLength={1000}
+          />
+          <Button type="submit" size="sm" disabled={connectToken.isPending}>
+            {connectToken.isPending ? "Validando..." : "Salvar e conectar"}
+          </Button>
+        </form>
+      </div>
+
       <div className="grid gap-3 lg:grid-cols-2">
         <div className="panel p-4">
           <h2 className="mb-3 text-sm font-semibold">Checklist de setup</h2>
