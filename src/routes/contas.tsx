@@ -88,7 +88,11 @@ function ContasPage() {
           icon={AtSign}
           title="Nenhuma conta conectada"
           description="Cole o token de acesso oficial da Meta na tela de Configuração para conectar sua conta Instagram Business ou Creator."
-          action={<Button onClick={() => connect.mutate()}>Conectar Instagram</Button>}
+          action={
+            <Button asChild>
+              <Link to="/configuracao">Conectar por token</Link>
+            </Button>
+          }
         />
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -150,8 +154,8 @@ function ContasPage() {
                 >
                   <RefreshCw className="h-3.5 w-3.5" /> Sincronizar
                 </Button>
-                <Button size="sm" variant="outline" disabled={connect.isPending} onClick={() => connect.mutate()}>
-                  Reconectar
+                <Button size="sm" variant="outline" asChild>
+                  <Link to="/configuracao">Reconectar</Link>
                 </Button>
                 <Button
                   size="icon"
