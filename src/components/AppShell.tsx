@@ -40,16 +40,17 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="sticky top-0 hidden h-screen w-[212px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 md:flex">
-        <div className="mb-6 flex items-center gap-2 px-2">
-          <div className="brand-gradient-bg flex h-8 w-8 items-center justify-center rounded-lg">
-            <Instagram className="h-4 w-4 text-background" />
+      <aside className="sticky top-0 hidden h-screen w-[228px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar px-3 py-4 md:flex">
+        <div className="mb-6 flex items-center gap-2.5 rounded-xl bg-surface/60 px-2.5 py-2.5 gradient-ring">
+          <div className="brand-gradient-bg brand-glow flex h-9 w-9 items-center justify-center rounded-lg">
+            <Instagram className="h-4.5 w-4.5 text-primary-foreground" />
           </div>
           <div className="leading-tight">
-            <p className="font-display text-sm font-semibold">Instagram Studio</p>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Solo</p>
+            <p className="font-display text-sm font-semibold">Olá, santosk7</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Painel de conteúdo</p>
           </div>
         </div>
+
 
         <nav className="flex flex-1 flex-col gap-0.5">
           {NAV.map((item) => {
