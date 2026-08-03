@@ -86,6 +86,18 @@ function Calendario() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteOne = useMutation({
+    mutationFn: async (postId: string) => {
+      const { error } = await supabase.from("posts").delete().eq("id", postId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Agendamento removido.");
+      qc.invalidateQueries({ queryKey: ["posts"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <AppShell
       title="Calendário"
