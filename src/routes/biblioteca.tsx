@@ -92,7 +92,7 @@ function Biblioteca() {
   return (
     <AppShell
       title="Biblioteca"
-      subtitle="URLs públicas reutilizáveis no Composer"
+      subtitle="URLs públicas reutilizáveis na tela Publicar"
       actions={
         <Button size="sm" variant={onlyFav ? "default" : "secondary"} onClick={() => setOnlyFav((v) => !v)}>
           <Star className="h-4 w-4" /> Favoritos
@@ -146,7 +146,7 @@ function Biblioteca() {
         <EmptyState
           icon={Images}
           title="Biblioteca vazia"
-          description="Salve URLs públicas de imagens e vídeos para reutilizar rapidamente no Composer."
+          description="Salve URLs públicas de imagens e vídeos para reutilizar rapidamente na tela Publicar."
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -184,7 +184,7 @@ function Biblioteca() {
                     className="h-7 flex-1 text-[11px]"
                     onClick={() => navigate({ to: "/composer", search: { midia: m.public_url } })}
                   >
-                    Usar no composer
+                    Usar em Publicar
                   </Button>
                   <Button size="icon" variant="ghost" className="h-7 w-7" asChild>
                     <a href={m.public_url} target="_blank" rel="noreferrer" aria-label="Abrir URL">

@@ -1,7 +1,19 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Save, Send, CalendarClock, Image as ImageIcon, Film, Layers, FileText, Info } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Save,
+  Send,
+  CalendarClock,
+  Image as ImageIcon,
+  Film,
+  Layers,
+  FileText,
+  Info,
+  Copy,
+  Plus,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
@@ -26,12 +38,12 @@ import { MediaUpload } from "@/components/MediaUpload";
 export const Route = createFileRoute("/composer")({
   head: () => ({
     meta: [
-      { title: "Composer — Instagram Studio Solo" },
+      { title: "Publicar — Instagram Studio Solo" },
       {
         name: "description",
         content: "Crie posts, Reels e carrosséis com validação das capacidades oficiais da API.",
       },
-      { property: "og:title", content: "Composer — Instagram Studio Solo" },
+      { property: "og:title", content: "Publicar — Instagram Studio Solo" },
       {
         property: "og:description",
         content: "Crie posts, Reels e carrosséis com validação das capacidades oficiais da API.",
@@ -40,6 +52,7 @@ export const Route = createFileRoute("/composer")({
   }),
   validateSearch: (search: Record<string, unknown>) => ({
     midia: typeof search["midia"] === "string" ? (search["midia"] as string) : undefined,
+    duplicar: typeof search["duplicar"] === "string" ? (search["duplicar"] as string) : undefined,
   }),
   component: Composer,
 });
@@ -57,7 +70,7 @@ const isPublicUrl = (url: string) => {
 };
 
 function Composer() {
-  const { midia } = useSearch({ from: "/composer" });
+  const { midia, duplicar } = useSearch({ from: "/composer" });
   const navigate = useNavigate();
   const qc = useQueryClient();
   const accounts = useQuery(accountsQuery);
@@ -71,11 +84,44 @@ function Composer() {
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [extraTimes, setExtraTimes] = useState<string[]>([]);
+  const [newTime, setNewTime] = useState("");
 
   const accountList = accounts.data ?? [];
   const account = accountList.find((a) => a.id === accountId);
   const drafts = (posts.data ?? []).filter((p) => p.status === "draft");
   const carouselUrls = carousel.split(/\s|\n|,/).map((s) => s.trim()).filter(Boolean);
+
+  const loadPost = (p: {
+    type: string;
+    account_id: string | null;
+    media_url: string | null;
+    cover_url: string | null;
+    carousel_urls: string[] | null;
+    caption: string | null;
+    hashtags: string | null;
+  }) => {
+    setType(((p.type as "POST" | "REEL" | "CAROUSEL") ?? "POST"));
+    setAccountId(p.account_id ?? "");
+    setMediaUrl(p.media_url ?? "");
+    setCoverUrl(p.cover_url ?? "");
+    setCarousel((p.carousel_urls ?? []).join("\n"));
+    setCaption(p.caption ?? "");
+    setHashtags(p.hashtags ?? "");
+  };
+
+  const duplicatedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!duplicar || duplicatedRef.current === duplicar) return;
+    const source = (posts.data ?? []).find((p) => p.id === duplicar);
+    if (!source) return;
+    duplicatedRef.current = duplicar;
+    loadPost(source);
+    setScheduledAt("");
+    setExtraTimes([]);
+    toast.info("Post duplicado — escolha os novos horários.");
+  }, [duplicar, posts.data]);
+
 
   const capabilityError = (() => {
     if (!accountList.length) return "Conecte uma conta Instagram profissional para publicar.";
@@ -99,7 +145,7 @@ function Composer() {
     return null;
   })();
 
-  const payload = () => ({
+  const payload = (when?: string | null) => ({
     account_id: accountId || null,
     type,
     caption: caption || null,
@@ -107,13 +153,13 @@ function Composer() {
     media_url: type === "CAROUSEL" ? null : mediaUrl || null,
     cover_url: type === "REEL" ? coverUrl || null : null,
     carousel_urls: type === "CAROUSEL" ? carouselUrls : [],
-    scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+    scheduled_at: when ? new Date(when).toISOString() : null,
   });
 
-  const savePost = async (status: string) => {
+  const savePost = async (status: string, when?: string | null) => {
     const { data, error } = await supabase
       .from("posts")
-      .insert({ ...payload(), status })
+      .insert({ ...payload(when ?? scheduledAt), status })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
@@ -129,17 +175,20 @@ function Composer() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const allTimes = [scheduledAt, ...extraTimes].filter(Boolean);
+
   const scheduleMutation = useMutation({
     mutationFn: async () => {
-      if (!scheduledAt) throw new Error("Escolha a data e a hora do agendamento.");
-      if (new Date(scheduledAt).getTime() < Date.now())
-        throw new Error("A data de agendamento precisa ser no futuro.");
+      if (!allTimes.length) throw new Error("Escolha a data e a hora do agendamento.");
+      if (allTimes.some((t) => new Date(t).getTime() < Date.now()))
+        throw new Error("Todos os horários precisam ser no futuro.");
       if (capabilityError) throw new Error(capabilityError);
       if (mediaError) throw new Error(mediaError);
-      return savePost("scheduled");
+      for (const t of allTimes) await savePost("scheduled", t);
+      return allTimes.length;
     },
-    onSuccess: () => {
-      toast.success("Post agendado.");
+    onSuccess: (n) => {
+      toast.success(n > 1 ? `${n} publicações agendadas.` : "Post agendado.");
       qc.invalidateQueries({ queryKey: ["posts"] });
       navigate({ to: "/calendario" });
     },
@@ -150,7 +199,7 @@ function Composer() {
     mutationFn: async () => {
       if (capabilityError) throw new Error(capabilityError);
       if (mediaError) throw new Error(mediaError);
-      const id = await savePost("draft");
+      const id = await savePost("draft", null);
       return publishPost({ data: { postId: id } });
     },
     onSuccess: () => {
@@ -163,7 +212,8 @@ function Composer() {
   const busy = draftMutation.isPending || scheduleMutation.isPending || publishMutation.isPending;
 
   return (
-    <AppShell title="Composer" subtitle="Criação com validação das capacidades oficiais da API">
+    <AppShell title="Publicar" subtitle="Criação, duplicação e agendamento em vários horários">
+
       <Tabs value={type} onValueChange={(v) => setType(v as typeof type)}>
         <TabsList className="bg-surface">
           <TabsTrigger value="POST">
@@ -203,18 +253,26 @@ function Composer() {
                       size="sm"
                       variant="secondary"
                       onClick={() => {
-                        setType((d.type as typeof type) ?? "POST");
-                        setAccountId(d.account_id ?? "");
-                        setMediaUrl(d.media_url ?? "");
-                        setCoverUrl(d.cover_url ?? "");
-                        setCarousel((d.carousel_urls ?? []).join("\n"));
-                        setCaption(d.caption ?? "");
-                        setHashtags(d.hashtags ?? "");
+                        loadPost(d);
                         toast.info("Rascunho carregado no editor.");
                       }}
                     >
                       Carregar
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        loadPost(d);
+                        setScheduledAt("");
+                        setExtraTimes([]);
+                        setType(((d.type as typeof type) ?? "POST"));
+                        toast.info("Cópia criada — escolha os novos horários.");
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5" /> Duplicar
+                    </Button>
+
                   </div>
                 </div>
               ))
@@ -332,6 +390,64 @@ function Composer() {
                   </div>
                 </div>
 
+                <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-xs">Repetir este conteúdo em outros horários</Label>
+                    <span className="text-[11px] text-muted-foreground">
+                      {allTimes.length} agendamento(s)
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Mesma legenda, hashtags, mídia e capa — uma cópia agendada para cada horário.
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      type="datetime-local"
+                      value={newTime}
+                      onChange={(e) => setNewTime(e.target.value)}
+                      className="bg-background"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        if (!newTime) return;
+                        if (allTimes.includes(newTime)) {
+                          toast.error("Esse horário já está na lista.");
+                          return;
+                        }
+                        setExtraTimes((prev) => [...prev, newTime]);
+                        setNewTime("");
+                      }}
+                    >
+                      <Plus className="h-4 w-4" /> Adicionar
+                    </Button>
+                  </div>
+                  {extraTimes.length ? (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {extraTimes.map((t) => (
+                        <span
+                          key={t}
+                          className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px]"
+                        >
+                          {fmtDate(new Date(t).toISOString())}
+                          <button
+                            type="button"
+                            aria-label="Remover horário"
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() => setExtraTimes((prev) => prev.filter((x) => x !== t))}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
+
+
                 {capabilityError || mediaError ? (
                   <div className="rounded-md border border-warning/30 bg-warning/10 p-2.5 text-[11px] text-warning">
                     {capabilityError ?? mediaError}
@@ -343,7 +459,7 @@ function Composer() {
                     <Save className="h-4 w-4" /> Salvar rascunho
                   </Button>
                   <Button variant="outline" size="sm" disabled={busy} onClick={() => scheduleMutation.mutate()}>
-                    <CalendarClock className="h-4 w-4" /> Agendar
+                    <CalendarClock className="h-4 w-4" /> Agendar{allTimes.length > 1 ? ` (${allTimes.length})` : ""}
                   </Button>
                   <Button size="sm" disabled={busy} onClick={() => publishMutation.mutate()}>
                     <Send className="h-4 w-4" /> Publicar agora
