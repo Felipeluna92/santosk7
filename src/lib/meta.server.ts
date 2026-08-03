@@ -183,6 +183,7 @@ export async function connectWithAccessToken(rawToken: string) {
   if (input.length < 20) throw new Error("Token inválido. Cole o token de acesso completo.");
 
   let token = input;
+  let expiresIn: number | null = null;
 
   // If app credentials exist, try upgrading to a long-lived token (60 dias).
   if (env.appSecret) {
@@ -193,7 +194,7 @@ export async function connectWithAccessToken(rawToken: string) {
         )}&access_token=${encodeURIComponent(token)}`,
       );
       if (long["access_token"]) token = String(long["access_token"]);
-      var expiresIn = Number(long["expires_in"] ?? 0) || null;
+      expiresIn = Number(long["expires_in"] ?? 0) || null;
     } catch {
       // Token may already be long-lived; segue com o token informado.
     }
