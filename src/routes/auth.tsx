@@ -52,24 +52,16 @@ function AuthPage() {
     setBusy(true);
     const authEmail = toAuthEmail(email);
     try {
-      if (mode === "signin") {
-        const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email: authEmail,
-          password,
-          options: { emailRedirectTo: `${window.location.origin}/` },
-        });
-        if (error) throw error;
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password });
+      if (error) throw error;
       const { data } = await supabase.auth.getUser();
       if (!data.user) {
-        toast.success("Conta criada. Confirme o e-mail para entrar.");
+        toast.error("Não foi possível entrar.");
         return;
       }
       await supabase.rpc("claim_app_ownership");
       navigate({ to: "/" });
+
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível entrar.");
     } finally {
