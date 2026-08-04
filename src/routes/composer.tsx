@@ -154,8 +154,8 @@ function Composer() {
     return null;
   })();
 
-  const payload = (when?: string | null) => ({
-    account_id: accountId || null,
+  const payload = (accId: string | null, when?: string | null) => ({
+    account_id: accId,
     type,
     caption: caption || null,
     hashtags: hashtags || null,
@@ -165,20 +165,25 @@ function Composer() {
     scheduled_at: when ? new Date(when).toISOString() : null,
   });
 
-  const savePost = async (status: string, when?: string | null) => {
+  const savePost = async (status: string, accId: string | null, when?: string | null) => {
     const { data, error } = await supabase
       .from("posts")
-      .insert({ ...payload(when ?? scheduledAt), status })
+      .insert({ ...payload(accId, when ?? null), status })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
     return data.id as string;
   };
 
+  const targetAccounts = () => (accountIds.length ? accountIds : [null]);
+
   const draftMutation = useMutation({
-    mutationFn: () => savePost("draft"),
-    onSuccess: () => {
-      toast.success("Rascunho salvo.");
+    mutationFn: async () => {
+      for (const acc of targetAccounts()) await savePost("draft", acc, scheduledAt || null);
+      return targetAccounts().length;
+    },
+    onSuccess: (n) => {
+      toast.success(n > 1 ? `${n} rascunhos salvos.` : "Rascunho salvo.");
       qc.invalidateQueries({ queryKey: ["posts"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -193,8 +198,13 @@ function Composer() {
         throw new Error("Todos os horários precisam ser no futuro.");
       if (capabilityError) throw new Error(capabilityError);
       if (mediaError) throw new Error(mediaError);
-      for (const t of allTimes) await savePost("scheduled", t);
-      return allTimes.length;
+      let n = 0;
+      for (const t of allTimes)
+        for (const acc of accountIds) {
+          await savePost("scheduled", acc, t);
+          n++;
+        }
+      return n;
     },
     onSuccess: (n) => {
       toast.success(n > 1 ? `${n} publicações agendadas.` : "Post agendado.");
@@ -208,8 +218,11 @@ function Composer() {
     mutationFn: async () => {
       if (capabilityError) throw new Error(capabilityError);
       if (mediaError) throw new Error(mediaError);
-      const id = await savePost("draft", null);
-      return publishPost({ data: { postId: id } });
+      for (const acc of accountIds) {
+        const id = await savePost("draft", acc, null);
+        await publishPost({ data: { postId: id } });
+      }
+      return accountIds.length;
     },
     onSuccess: () => {
       toast.success("Publicado na API oficial da Meta.");
