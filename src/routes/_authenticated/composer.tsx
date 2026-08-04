@@ -35,7 +35,7 @@ import { accountsQuery, postsQuery, POST_STATUS, fmtDate } from "@/lib/data";
 import { publishPost } from "@/lib/meta.functions";
 import { MediaUpload } from "@/components/MediaUpload";
 
-export const Route = createFileRoute("/composer")({
+export const Route = createFileRoute("/_authenticated/composer")({
   head: () => ({
     meta: [
       { title: "Publicar — Instagram Studio Solo" },
@@ -76,7 +76,7 @@ const isPublicUrl = (url: string) => {
 };
 
 function Composer() {
-  const { midia, duplicar } = useSearch({ from: "/composer" });
+  const { midia, duplicar } = useSearch({ from: "/_authenticated/composer" });
   const navigate = useNavigate();
   const qc = useQueryClient();
   const accounts = useQuery(accountsQuery);

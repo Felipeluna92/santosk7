@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { accountsQuery } from "@/lib/data";
 import { connectManualToken, getMetaStatus } from "@/lib/meta.functions";
 
-export const Route = createFileRoute("/configuracao")({
+export const Route = createFileRoute("/_authenticated/configuracao")({
   head: () => ({
     meta: [
       { title: "Configuração Meta — Instagram Studio Solo" },
@@ -41,7 +41,7 @@ const ENV_VARS = [
 ];
 
 function Configuracao() {
-  const { erro } = useSearch({ from: "/configuracao" });
+  const { erro } = useSearch({ from: "/_authenticated/configuracao" });
   const queryClient = useQueryClient();
   const [token, setToken] = useState("");
   const status = useQuery({ queryKey: ["meta-status"], queryFn: () => getMetaStatus() });

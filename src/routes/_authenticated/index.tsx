@@ -11,7 +11,7 @@ import { accountsQuery, postsQuery, fmtDate, POST_STATUS, POST_TYPE_LABEL } from
 import { demoAccounts, demoPosts } from "@/lib/demo";
 import { getAccountsInsights } from "@/lib/meta.functions";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "Painel — Instagram Studio Solo" },

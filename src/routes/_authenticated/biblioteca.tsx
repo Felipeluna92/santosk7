@@ -19,7 +19,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { mediaQuery } from "@/lib/data";
 
-export const Route = createFileRoute("/biblioteca")({
+export const Route = createFileRoute("/_authenticated/biblioteca")({
   head: () => ({
     meta: [
       { title: "Biblioteca — Instagram Studio Solo" },

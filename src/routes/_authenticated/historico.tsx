@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/table";
 import { accountsQuery, postsQuery, POST_STATUS, POST_TYPE_LABEL, fmtDate } from "@/lib/data";
 
-export const Route = createFileRoute("/historico")({
+export const Route = createFileRoute("/_authenticated/historico")({
   head: () => ({
     meta: [
       { title: "Histórico — Instagram Studio Solo" },

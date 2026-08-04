@@ -13,7 +13,7 @@ import { accountsQuery, fmtDate } from "@/lib/data";
 import { demoAccounts } from "@/lib/demo";
 import { disconnectAccount, syncAccount } from "@/lib/meta.functions";
 
-export const Route = createFileRoute("/contas")({
+export const Route = createFileRoute("/_authenticated/contas")({
   head: () => ({
     meta: [
       { title: "Contas — Instagram Studio Solo" },
@@ -35,7 +35,7 @@ export const Route = createFileRoute("/contas")({
 });
 
 function ContasPage() {
-  const search = useSearch({ from: "/contas" });
+  const search = useSearch({ from: "/_authenticated/contas" });
   const qc = useQueryClient();
   const accounts = useQuery(accountsQuery);
 
