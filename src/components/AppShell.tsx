@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/", label: "Painel", icon: LayoutDashboard },
-  { to: "/ai", label: "AI Cálica", icon: Sparkles },
+  { to: "/ai", label: "IA Cálica", icon: Sparkles, highlight: true },
   { to: "/contas", label: "Contas", icon: AtSign },
 
   { to: "/composer", label: "Publicar", icon: PenSquare },
