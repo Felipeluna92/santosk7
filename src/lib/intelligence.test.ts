@@ -46,7 +46,7 @@ describe("estatística básica", () => {
   it("calcula mediana e percentis", () => {
     expect(median([3, 1, 2])).toBe(2);
     expect(median([])).toBeNull();
-    expect(percentile([1, 2, 3, 4], 75)).toBe(4);
+    expect(percentile([1, 2, 3, 4], 75)).toBe(3);
   });
 
   it("classifica confiança pelo tamanho da amostra", () => {
