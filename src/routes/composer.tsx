@@ -57,6 +57,12 @@ export const Route = createFileRoute("/composer")({
   component: Composer,
 });
 
+const TIME_SLOTS: string[] = Array.from({ length: 24 * 3 }, (_, i) => {
+  const h = Math.floor(i / 3);
+  const m = (i % 3) * 20;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+});
+
 const isPublicUrl = (url: string) => {
   try {
     const u = new URL(url);
@@ -77,20 +83,24 @@ function Composer() {
   const posts = useQuery(postsQuery);
 
   const [type, setType] = useState<"POST" | "REEL" | "CAROUSEL">("POST");
-  const [accountId, setAccountId] = useState<string>("");
+  const [accountIds, setAccountIds] = useState<string[]>([]);
   const [mediaUrl, setMediaUrl] = useState(midia ?? "");
   const [carousel, setCarousel] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [schedDate, setSchedDate] = useState("");
+  const [schedTime, setSchedTime] = useState("");
   const [extraTimes, setExtraTimes] = useState<string[]>([]);
   const [newTime, setNewTime] = useState("");
 
   const accountList = accounts.data ?? [];
-  const account = accountList.find((a) => a.id === accountId);
+  const selectedAccounts = accountList.filter((a) => accountIds.includes(a.id));
+  const account = selectedAccounts[0];
   const drafts = (posts.data ?? []).filter((p) => p.status === "draft");
   const carouselUrls = carousel.split(/\s|\n|,/).map((s) => s.trim()).filter(Boolean);
+  const scheduledAt = schedDate && schedTime ? `${schedDate}T${schedTime}` : "";
+
 
   const loadPost = (p: {
     type: string;
@@ -102,7 +112,7 @@ function Composer() {
     hashtags: string | null;
   }) => {
     setType(((p.type as "POST" | "REEL" | "CAROUSEL") ?? "POST"));
-    setAccountId(p.account_id ?? "");
+    setAccountIds(p.account_id ? [p.account_id] : []);
     setMediaUrl(p.media_url ?? "");
     setCoverUrl(p.cover_url ?? "");
     setCarousel((p.carousel_urls ?? []).join("\n"));
@@ -117,7 +127,8 @@ function Composer() {
     if (!source) return;
     duplicatedRef.current = duplicar;
     loadPost(source);
-    setScheduledAt("");
+    setSchedDate("");
+    setSchedTime("");
     setExtraTimes([]);
     toast.info("Post duplicado — escolha os novos horários.");
   }, [duplicar, posts.data]);
@@ -125,11 +136,15 @@ function Composer() {
 
   const capabilityError = (() => {
     if (!accountList.length) return "Conecte uma conta Instagram profissional para publicar.";
-    if (!accountId) return "Selecione a conta que vai publicar.";
-    if (account && account.account_type && !["BUSINESS", "CREATOR", "MEDIA_CREATOR"].includes(account.account_type))
-      return "A publicação pela API oficial exige conta Business ou Creator.";
-    if (account && !(account.scopes ?? []).includes("instagram_business_content_publish"))
-      return "A conta não tem a permissão instagram_business_content_publish aprovada.";
+    if (!accountIds.length) return "Selecione ao menos uma conta que vai publicar.";
+    const bad = selectedAccounts.find(
+      (a) => a.account_type && !["BUSINESS", "CREATOR", "MEDIA_CREATOR"].includes(a.account_type),
+    );
+    if (bad) return `@${bad.username}: a publicação pela API oficial exige conta Business ou Creator.`;
+    const noScope = selectedAccounts.find(
+      (a) => !(a.scopes ?? []).includes("instagram_business_content_publish"),
+    );
+    if (noScope) return `@${noScope.username} não tem a permissão instagram_business_content_publish aprovada.`;
     return null;
   })();
 
@@ -145,8 +160,8 @@ function Composer() {
     return null;
   })();
 
-  const payload = (when?: string | null) => ({
-    account_id: accountId || null,
+  const payload = (accId: string | null, when?: string | null) => ({
+    account_id: accId,
     type,
     caption: caption || null,
     hashtags: hashtags || null,
@@ -156,20 +171,25 @@ function Composer() {
     scheduled_at: when ? new Date(when).toISOString() : null,
   });
 
-  const savePost = async (status: string, when?: string | null) => {
+  const savePost = async (status: string, accId: string | null, when?: string | null) => {
     const { data, error } = await supabase
       .from("posts")
-      .insert({ ...payload(when ?? scheduledAt), status })
+      .insert({ ...payload(accId, when ?? null), status })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
     return data.id as string;
   };
 
+  const targetAccounts = () => (accountIds.length ? accountIds : [null]);
+
   const draftMutation = useMutation({
-    mutationFn: () => savePost("draft"),
-    onSuccess: () => {
-      toast.success("Rascunho salvo.");
+    mutationFn: async () => {
+      for (const acc of targetAccounts()) await savePost("draft", acc, scheduledAt || null);
+      return targetAccounts().length;
+    },
+    onSuccess: (n) => {
+      toast.success(n > 1 ? `${n} rascunhos salvos.` : "Rascunho salvo.");
       qc.invalidateQueries({ queryKey: ["posts"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -184,8 +204,13 @@ function Composer() {
         throw new Error("Todos os horários precisam ser no futuro.");
       if (capabilityError) throw new Error(capabilityError);
       if (mediaError) throw new Error(mediaError);
-      for (const t of allTimes) await savePost("scheduled", t);
-      return allTimes.length;
+      let n = 0;
+      for (const t of allTimes)
+        for (const acc of accountIds) {
+          await savePost("scheduled", acc, t);
+          n++;
+        }
+      return n;
     },
     onSuccess: (n) => {
       toast.success(n > 1 ? `${n} publicações agendadas.` : "Post agendado.");
@@ -199,8 +224,11 @@ function Composer() {
     mutationFn: async () => {
       if (capabilityError) throw new Error(capabilityError);
       if (mediaError) throw new Error(mediaError);
-      const id = await savePost("draft", null);
-      return publishPost({ data: { postId: id } });
+      for (const acc of accountIds) {
+        const id = await savePost("draft", acc, null);
+        await publishPost({ data: { postId: id } });
+      }
+      return accountIds.length;
     },
     onSuccess: () => {
       toast.success("Publicado na API oficial da Meta.");
@@ -266,7 +294,8 @@ function Composer() {
                       variant="outline"
                       onClick={() => {
                         loadPost(d);
-                        setScheduledAt("");
+                        setSchedDate("");
+                        setSchedTime("");
                         setExtraTimes([]);
                         setType(((d.type as typeof type) ?? "POST"));
                         toast.info("Cópia criada — escolha os novos horários.");
@@ -287,24 +316,49 @@ function Composer() {
             <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
               <div className="panel min-w-0 space-y-4 p-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Conta</Label>
-                  <Select value={accountId} onValueChange={setAccountId}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="Selecione a conta" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accountList.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          @{a.username} · {a.account_type}
-                        </SelectItem>
-                      ))}
-                      {accountList.length === 0 ? (
-                        <SelectItem value="none" disabled>
-                          Nenhuma conta conectada
-                        </SelectItem>
-                      ) : null}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-xs">Contas ({accountIds.length} selecionada(s))</Label>
+                    {accountList.length > 1 ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={() =>
+                          setAccountIds(
+                            accountIds.length === accountList.length ? [] : accountList.map((a) => a.id),
+                          )
+                        }
+                      >
+                        {accountIds.length === accountList.length ? "Limpar" : "Selecionar todas"}
+                      </Button>
+                    ) : null}
+                  </div>
+                  <div className="space-y-1 rounded-md border border-border bg-background p-2">
+                    {accountList.length === 0 ? (
+                      <p className="px-1 py-2 text-[11px] text-muted-foreground">Nenhuma conta conectada</p>
+                    ) : (
+                      accountList.map((a) => (
+                        <label
+                          key={a.id}
+                          className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1.5 text-[12px] hover:bg-secondary/50"
+                        >
+                          <input
+                            type="checkbox"
+                            className="accent-primary"
+                            checked={accountIds.includes(a.id)}
+                            onChange={(e) =>
+                              setAccountIds((prev) =>
+                                e.target.checked ? [...prev, a.id] : prev.filter((x) => x !== a.id),
+                              )
+                            }
+                          />
+                          <span className="truncate">@{a.username}</span>
+                          <span className="ml-auto text-[10px] text-muted-foreground">{a.account_type}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
                 </div>
 
                 {t === "CAROUSEL" ? (
@@ -381,14 +435,31 @@ function Composer() {
                       className="bg-background"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Agendar para</Label>
-                    <Input
-                      type="datetime-local"
-                      value={scheduledAt}
-                      onChange={(e) => setScheduledAt(e.target.value)}
-                      className="bg-background"
-                    />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Data</Label>
+                      <Input
+                        type="date"
+                        value={schedDate}
+                        onChange={(e) => setSchedDate(e.target.value)}
+                        className="bg-background"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Horário</Label>
+                      <Select value={schedTime} onValueChange={setSchedTime}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-64">
+                          {TIME_SLOTS.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
@@ -403,23 +474,34 @@ function Composer() {
                     Mesma legenda, hashtags, mídia e capa — uma cópia agendada para cada horário.
                   </p>
                   <div className="flex gap-2">
-                    <Input
-                      type="datetime-local"
-                      value={newTime}
-                      onChange={(e) => setNewTime(e.target.value)}
-                      className="bg-background"
-                    />
+                    <Select value={newTime} onValueChange={setNewTime}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Horário (mesma data)" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64">
+                        {TIME_SLOTS.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button
                       type="button"
                       size="sm"
                       variant="secondary"
                       onClick={() => {
                         if (!newTime) return;
-                        if (allTimes.includes(newTime)) {
+                        if (!schedDate) {
+                          toast.error("Escolha a data primeiro.");
+                          return;
+                        }
+                        const value = `${schedDate}T${newTime}`;
+                        if (allTimes.includes(value)) {
                           toast.error("Esse horário já está na lista.");
                           return;
                         }
-                        setExtraTimes((prev) => [...prev, newTime]);
+                        setExtraTimes((prev) => [...prev, value]);
                         setNewTime("");
                       }}
                     >
