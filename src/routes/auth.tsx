@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth")({
-  ssr: false,
   head: () => ({
     meta: [
       { title: "Entrar — Instagram Studio Solo" },
@@ -22,6 +21,8 @@ export const Route = createFileRoute("/auth")({
         property: "og:description",
         content: "Acesso restrito ao painel de publicação e agendamento do Instagram Studio Solo.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AuthPage,
