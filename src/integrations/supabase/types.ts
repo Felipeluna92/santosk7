@@ -43,6 +43,21 @@ export type Database = {
           },
         ]
       }
+      app_owners: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       instagram_accounts: {
         Row: {
           account_type: string | null
@@ -251,7 +266,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_app_ownership: { Args: never; Returns: boolean }
+      is_app_owner: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
