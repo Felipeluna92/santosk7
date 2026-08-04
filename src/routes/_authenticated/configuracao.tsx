@@ -5,6 +5,7 @@ import { CheckCircle2, Circle, Copy, ShieldAlert, KeyRound, Lock } from "lucide-
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
+import { NotificationsCard } from "@/components/NotificationsCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -119,6 +120,10 @@ function Configuracao() {
             {connectToken.isPending ? "Validando..." : "Salvar e conectar"}
           </Button>
         </form>
+      </div>
+
+      <div className="mb-3">
+        <NotificationsCard />
       </div>
 
       <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
