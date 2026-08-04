@@ -591,15 +591,46 @@ export async function fetchInsightsTimeseries(days = 30) {
         }
       };
 
-      // "views" exige metric_type=time_series nas versões novas da API.
+      // "views" com metric_type=time_series costuma vir vazio nesta API.
+      // Fallback oficial: consulta total_value dia a dia (janelas de 24h).
+      let gotSeries = false;
       try {
         const viewsSeries = await graph(
           `https://graph.instagram.com/${env.graphVersion}/me/insights?metric=views&period=day&metric_type=time_series&since=${since}&until=${now}&access_token=${encodeURIComponent(token)}`,
         );
-        collect((viewsSeries["data"] as MetricRow[] | undefined) ?? []);
+        const rows = (viewsSeries["data"] as MetricRow[] | undefined) ?? [];
+        gotSeries = rows.some((r) => (r.values ?? []).length > 0);
+        collect(rows);
       } catch {
         // métrica de views indisponível para a conta
       }
+
+      if (!gotSeries) {
+        const dayEnds: number[] = [];
+        const todayEnd = Math.floor(Date.now() / 1000);
+        for (let i = 0; i < days; i++) dayEnds.push(todayEnd - i * 86400);
+        const daily = await Promise.all(
+          dayEnds.map(async (end) => {
+            try {
+              const res = await graph(
+                `https://graph.instagram.com/${env.graphVersion}/me/insights?metric=views&period=day&metric_type=total_value&since=${end - 86400}&until=${end}&access_token=${encodeURIComponent(token)}`,
+              );
+              const arr = (res["data"] as { total_value?: { value?: number } }[] | undefined) ?? [];
+              const value = arr.find((m) => typeof m.total_value?.value === "number")?.total_value?.value;
+              return { end, value: typeof value === "number" ? value : null };
+            } catch {
+              return { end, value: null };
+            }
+          }),
+        );
+        for (const d of daily) {
+          if (d.value === null) continue;
+          const day = new Date(d.end * 1000).toISOString().slice(0, 10);
+          viewsByDay.set(day, (viewsByDay.get(day) ?? 0) + d.value);
+          available = true;
+        }
+      }
+
 
       try {
         const followerSeries = await graph(
