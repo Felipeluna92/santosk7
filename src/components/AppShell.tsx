@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/", label: "Painel", icon: LayoutDashboard },
-  { to: "/ai", label: "AI Cálica", icon: Sparkles },
+  { to: "/ai", label: "IA Cálica", icon: Sparkles, highlight: true },
   { to: "/contas", label: "Contas", icon: AtSign },
 
   { to: "/composer", label: "Publicar", icon: PenSquare },
@@ -51,6 +51,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
       <nav className="flex flex-1 flex-col gap-0.5">
         {NAV.map((item) => {
           const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+          const highlight = "highlight" in item && item.highlight;
           return (
             <Link
               key={item.to}
@@ -58,12 +59,18 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
               onClick={onNavigate}
               className={cn(
                 "relative flex items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:py-2 md:text-[13px]",
+                highlight && "text-foreground gradient-ring bg-surface/50",
                 active &&
                   "bg-sidebar-accent text-sidebar-accent-foreground before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-full before:bg-[image:var(--gradient-brand)]",
               )}
             >
-              <item.icon className={cn("h-4 w-4 shrink-0", active && "text-primary")} />
+              <item.icon className={cn("h-4 w-4 shrink-0", (active || highlight) && "text-primary")} />
               {item.label}
+              {highlight ? (
+                <span className="ml-auto rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
+                  IA
+                </span>
+              ) : null}
             </Link>
           );
         })}
