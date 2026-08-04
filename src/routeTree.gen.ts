@@ -9,55 +9,56 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as BibliotecaRouteImport } from './routes/biblioteca'
-import { Route as CalendarioRouteImport } from './routes/calendario'
-import { Route as ComposerRouteImport } from './routes/composer'
-import { Route as ConfiguracaoRouteImport } from './routes/configuracao'
-import { Route as ContasRouteImport } from './routes/contas'
-import { Route as HistoricoRouteImport } from './routes/historico'
-import { Route as LogsRouteImport } from './routes/logs'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedBibliotecaRouteImport } from './routes/_authenticated/biblioteca'
+import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
+import { Route as AuthenticatedComposerRouteImport } from './routes/_authenticated/composer'
+import { Route as AuthenticatedConfiguracaoRouteImport } from './routes/_authenticated/configuracao'
+import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
+import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated/historico'
+import { Route as AuthenticatedLogsRouteImport } from './routes/_authenticated/logs'
 import { Route as ApiPublicHooksPublishScheduledRouteImport } from './routes/api/public/hooks/publish-scheduled'
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media/$'
 import { Route as ApiPublicOauthInstagramCallbackRouteImport } from './routes/api/public/oauth/instagram/callback'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/_authenticated/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BibliotecaRoute = BibliotecaRouteImport.update({
-  id: '/biblioteca',
+const AuthenticatedBibliotecaRoute = AuthenticatedBibliotecaRouteImport.update({
+  id: '/_authenticated/biblioteca',
   path: '/biblioteca',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CalendarioRoute = CalendarioRouteImport.update({
-  id: '/calendario',
+const AuthenticatedCalendarioRoute = AuthenticatedCalendarioRouteImport.update({
+  id: '/_authenticated/calendario',
   path: '/calendario',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ComposerRoute = ComposerRouteImport.update({
-  id: '/composer',
+const AuthenticatedComposerRoute = AuthenticatedComposerRouteImport.update({
+  id: '/_authenticated/composer',
   path: '/composer',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ConfiguracaoRoute = ConfiguracaoRouteImport.update({
-  id: '/configuracao',
-  path: '/configuracao',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContasRoute = ContasRouteImport.update({
-  id: '/contas',
+const AuthenticatedConfiguracaoRoute =
+  AuthenticatedConfiguracaoRouteImport.update({
+    id: '/_authenticated/configuracao',
+    path: '/configuracao',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedContasRoute = AuthenticatedContasRouteImport.update({
+  id: '/_authenticated/contas',
   path: '/contas',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HistoricoRoute = HistoricoRouteImport.update({
-  id: '/historico',
+const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
+  id: '/_authenticated/historico',
   path: '/historico',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LogsRoute = LogsRouteImport.update({
-  id: '/logs',
+const AuthenticatedLogsRoute = AuthenticatedLogsRouteImport.update({
+  id: '/_authenticated/logs',
   path: '/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
@@ -80,41 +81,41 @@ const ApiPublicOauthInstagramCallbackRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/biblioteca': typeof BibliotecaRoute
-  '/calendario': typeof CalendarioRoute
-  '/composer': typeof ComposerRoute
-  '/configuracao': typeof ConfiguracaoRoute
-  '/contas': typeof ContasRoute
-  '/historico': typeof HistoricoRoute
-  '/logs': typeof LogsRoute
+  '/biblioteca': typeof AuthenticatedBibliotecaRoute
+  '/calendario': typeof AuthenticatedCalendarioRoute
+  '/composer': typeof AuthenticatedComposerRoute
+  '/configuracao': typeof AuthenticatedConfiguracaoRoute
+  '/contas': typeof AuthenticatedContasRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
+  '/logs': typeof AuthenticatedLogsRoute
+  '/': typeof AuthenticatedIndexRoute
   '/api/public/hooks/publish-scheduled': typeof ApiPublicHooksPublishScheduledRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/biblioteca': typeof BibliotecaRoute
-  '/calendario': typeof CalendarioRoute
-  '/composer': typeof ComposerRoute
-  '/configuracao': typeof ConfiguracaoRoute
-  '/contas': typeof ContasRoute
-  '/historico': typeof HistoricoRoute
-  '/logs': typeof LogsRoute
+  '/biblioteca': typeof AuthenticatedBibliotecaRoute
+  '/calendario': typeof AuthenticatedCalendarioRoute
+  '/composer': typeof AuthenticatedComposerRoute
+  '/configuracao': typeof AuthenticatedConfiguracaoRoute
+  '/contas': typeof AuthenticatedContasRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
+  '/logs': typeof AuthenticatedLogsRoute
+  '/': typeof AuthenticatedIndexRoute
   '/api/public/hooks/publish-scheduled': typeof ApiPublicHooksPublishScheduledRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/biblioteca': typeof BibliotecaRoute
-  '/calendario': typeof CalendarioRoute
-  '/composer': typeof ComposerRoute
-  '/configuracao': typeof ConfiguracaoRoute
-  '/contas': typeof ContasRoute
-  '/historico': typeof HistoricoRoute
-  '/logs': typeof LogsRoute
+  '/_authenticated/biblioteca': typeof AuthenticatedBibliotecaRoute
+  '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
+  '/_authenticated/composer': typeof AuthenticatedComposerRoute
+  '/_authenticated/configuracao': typeof AuthenticatedConfiguracaoRoute
+  '/_authenticated/contas': typeof AuthenticatedContasRoute
+  '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
+  '/_authenticated/logs': typeof AuthenticatedLogsRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
   '/api/public/hooks/publish-scheduled': typeof ApiPublicHooksPublishScheduledRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
@@ -122,7 +123,6 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/biblioteca'
     | '/calendario'
     | '/composer'
@@ -130,12 +130,12 @@ export interface FileRouteTypes {
     | '/contas'
     | '/historico'
     | '/logs'
+    | '/'
     | '/api/public/hooks/publish-scheduled'
     | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/biblioteca'
     | '/calendario'
     | '/composer'
@@ -143,33 +143,34 @@ export interface FileRouteTypes {
     | '/contas'
     | '/historico'
     | '/logs'
+    | '/'
     | '/api/public/hooks/publish-scheduled'
     | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
   id:
     | '__root__'
-    | '/'
-    | '/biblioteca'
-    | '/calendario'
-    | '/composer'
-    | '/configuracao'
-    | '/contas'
-    | '/historico'
-    | '/logs'
+    | '/_authenticated/biblioteca'
+    | '/_authenticated/calendario'
+    | '/_authenticated/composer'
+    | '/_authenticated/configuracao'
+    | '/_authenticated/contas'
+    | '/_authenticated/historico'
+    | '/_authenticated/logs'
+    | '/_authenticated/'
     | '/api/public/hooks/publish-scheduled'
     | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  BibliotecaRoute: typeof BibliotecaRoute
-  CalendarioRoute: typeof CalendarioRoute
-  ComposerRoute: typeof ComposerRoute
-  ConfiguracaoRoute: typeof ConfiguracaoRoute
-  ContasRoute: typeof ContasRoute
-  HistoricoRoute: typeof HistoricoRoute
-  LogsRoute: typeof LogsRoute
+  AuthenticatedBibliotecaRoute: typeof AuthenticatedBibliotecaRoute
+  AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
+  AuthenticatedComposerRoute: typeof AuthenticatedComposerRoute
+  AuthenticatedConfiguracaoRoute: typeof AuthenticatedConfiguracaoRoute
+  AuthenticatedContasRoute: typeof AuthenticatedContasRoute
+  AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
+  AuthenticatedLogsRoute: typeof AuthenticatedLogsRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   ApiPublicHooksPublishScheduledRoute: typeof ApiPublicHooksPublishScheduledRoute
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
   ApiPublicOauthInstagramCallbackRoute: typeof ApiPublicOauthInstagramCallbackRoute
@@ -177,60 +178,60 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/biblioteca': {
-      id: '/biblioteca'
+    '/_authenticated/biblioteca': {
+      id: '/_authenticated/biblioteca'
       path: '/biblioteca'
       fullPath: '/biblioteca'
-      preLoaderRoute: typeof BibliotecaRouteImport
+      preLoaderRoute: typeof AuthenticatedBibliotecaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/calendario': {
-      id: '/calendario'
+    '/_authenticated/calendario': {
+      id: '/_authenticated/calendario'
       path: '/calendario'
       fullPath: '/calendario'
-      preLoaderRoute: typeof CalendarioRouteImport
+      preLoaderRoute: typeof AuthenticatedCalendarioRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/composer': {
-      id: '/composer'
+    '/_authenticated/composer': {
+      id: '/_authenticated/composer'
       path: '/composer'
       fullPath: '/composer'
-      preLoaderRoute: typeof ComposerRouteImport
+      preLoaderRoute: typeof AuthenticatedComposerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/configuracao': {
-      id: '/configuracao'
+    '/_authenticated/configuracao': {
+      id: '/_authenticated/configuracao'
       path: '/configuracao'
       fullPath: '/configuracao'
-      preLoaderRoute: typeof ConfiguracaoRouteImport
+      preLoaderRoute: typeof AuthenticatedConfiguracaoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/contas': {
-      id: '/contas'
+    '/_authenticated/contas': {
+      id: '/_authenticated/contas'
       path: '/contas'
       fullPath: '/contas'
-      preLoaderRoute: typeof ContasRouteImport
+      preLoaderRoute: typeof AuthenticatedContasRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/historico': {
-      id: '/historico'
+    '/_authenticated/historico': {
+      id: '/_authenticated/historico'
       path: '/historico'
       fullPath: '/historico'
-      preLoaderRoute: typeof HistoricoRouteImport
+      preLoaderRoute: typeof AuthenticatedHistoricoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/logs': {
-      id: '/logs'
+    '/_authenticated/logs': {
+      id: '/_authenticated/logs'
       path: '/logs'
       fullPath: '/logs'
-      preLoaderRoute: typeof LogsRouteImport
+      preLoaderRoute: typeof AuthenticatedLogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/publish-scheduled': {
@@ -258,14 +259,14 @@ declare module '@tanstack/react-router' {
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  BibliotecaRoute: BibliotecaRoute,
-  CalendarioRoute: CalendarioRoute,
-  ComposerRoute: ComposerRoute,
-  ConfiguracaoRoute: ConfiguracaoRoute,
-  ContasRoute: ContasRoute,
-  HistoricoRoute: HistoricoRoute,
-  LogsRoute: LogsRoute,
+  AuthenticatedBibliotecaRoute: AuthenticatedBibliotecaRoute,
+  AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
+  AuthenticatedComposerRoute: AuthenticatedComposerRoute,
+  AuthenticatedConfiguracaoRoute: AuthenticatedConfiguracaoRoute,
+  AuthenticatedContasRoute: AuthenticatedContasRoute,
+  AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
+  AuthenticatedLogsRoute: AuthenticatedLogsRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   ApiPublicHooksPublishScheduledRoute: ApiPublicHooksPublishScheduledRoute,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
   ApiPublicOauthInstagramCallbackRoute: ApiPublicOauthInstagramCallbackRoute,
@@ -273,13 +274,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
