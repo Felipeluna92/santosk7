@@ -111,21 +111,18 @@ function AuthPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="bg-background"
-            autoComplete={mode === "signin" ? "current-password" : "new-password"}
+            autoComplete="current-password"
           />
         </div>
 
         <Button type="submit" className="w-full" disabled={busy}>
-          {mode === "signin" ? "Entrar" : "Criar conta"}
+          Entrar
         </Button>
-        <button
-          type="button"
-          className="w-full text-[11px] text-muted-foreground hover:text-foreground"
-          onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-        >
-          {mode === "signin" ? "Primeiro acesso? Criar conta" : "Já tenho conta — entrar"}
-        </button>
+        <p className="text-center text-[11px] text-muted-foreground">
+          Painel privado. Não há criação de contas — apenas o acesso do proprietário funciona.
+        </p>
       </form>
+
     </main>
   );
 }
