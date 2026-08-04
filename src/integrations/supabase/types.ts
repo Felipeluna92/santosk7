@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_alerts: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          message: string
+          resolved_at: string | null
+          severity: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          message: string
+          resolved_at?: string | null
+          severity?: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string
+          resolved_at?: string | null
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_alerts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       account_tokens: {
         Row: {
           access_token: string
@@ -227,6 +265,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          label: string | null
+          p256dh: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          label?: string | null
+          p256dh: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          label?: string | null
+          p256dh?: string
+        }
+        Relationships: []
       }
       settings: {
         Row: {
