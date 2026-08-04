@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { logsQuery, fmtDate } from "@/lib/data";
 
-export const Route = createFileRoute("/logs")({
+export const Route = createFileRoute("/_authenticated/logs")({
   head: () => ({
     meta: [
       { title: "Logs — Instagram Studio Solo" },

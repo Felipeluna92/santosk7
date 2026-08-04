@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { postsQuery, POST_STATUS, POST_TYPE_LABEL, fmtDate } from "@/lib/data";
 import { publishPending, publishPost } from "@/lib/meta.functions";
 
-export const Route = createFileRoute("/calendario")({
+export const Route = createFileRoute("/_authenticated/calendario")({
   head: () => ({
     meta: [
       { title: "Calendário — Instagram Studio Solo" },
