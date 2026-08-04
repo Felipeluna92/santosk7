@@ -57,6 +57,12 @@ export const Route = createFileRoute("/composer")({
   component: Composer,
 });
 
+const TIME_SLOTS: string[] = Array.from({ length: 24 * 3 }, (_, i) => {
+  const h = Math.floor(i / 3);
+  const m = (i % 3) * 20;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+});
+
 const isPublicUrl = (url: string) => {
   try {
     const u = new URL(url);
@@ -468,23 +474,34 @@ function Composer() {
                     Mesma legenda, hashtags, mídia e capa — uma cópia agendada para cada horário.
                   </p>
                   <div className="flex gap-2">
-                    <Input
-                      type="datetime-local"
-                      value={newTime}
-                      onChange={(e) => setNewTime(e.target.value)}
-                      className="bg-background"
-                    />
+                    <Select value={newTime} onValueChange={setNewTime}>
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Horário (mesma data)" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64">
+                        {TIME_SLOTS.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button
                       type="button"
                       size="sm"
                       variant="secondary"
                       onClick={() => {
                         if (!newTime) return;
-                        if (allTimes.includes(newTime)) {
+                        if (!schedDate) {
+                          toast.error("Escolha a data primeiro.");
+                          return;
+                        }
+                        const value = `${schedDate}T${newTime}`;
+                        if (allTimes.includes(value)) {
                           toast.error("Esse horário já está na lista.");
                           return;
                         }
-                        setExtraTimes((prev) => [...prev, newTime]);
+                        setExtraTimes((prev) => [...prev, value]);
                         setNewTime("");
                       }}
                     >
