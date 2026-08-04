@@ -30,7 +30,7 @@ export function InsightsChart() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold">Evolução</h3>
-          <p className="text-[11px] text-muted-foreground">Views e seguidores dos últimos 30 dias</p>
+          <p className="text-[11px] text-muted-foreground">Views e seguidores dos últimos 14 dias</p>
         </div>
         <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1.5">
