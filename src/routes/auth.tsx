@@ -27,6 +27,12 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+function toAuthEmail(input: string) {
+  const value = input.trim().toLowerCase();
+  if (value.includes("@")) return value;
+  return `${value.replace(/[^a-z0-9._-]/g, "")}@studio.local`;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -43,13 +49,14 @@ function AuthPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
+    const authEmail = toAuthEmail(email);
     try {
       if (mode === "signin") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password });
         if (error) throw error;
       } else {
         const { error } = await supabase.auth.signUp({
-          email,
+          email: authEmail,
           password,
           options: { emailRedirectTo: `${window.location.origin}/` },
         });
@@ -83,16 +90,17 @@ function AuthPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs">E-mail</Label>
+          <Label className="text-xs">Usuário ou e-mail</Label>
           <Input
-            type="email"
+            type="text"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="bg-background"
-            autoComplete="email"
+            autoComplete="username"
           />
         </div>
+
         <div className="space-y-1.5">
           <Label className="text-xs">Senha</Label>
           <Input
