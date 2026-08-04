@@ -106,7 +106,7 @@ function Composer() {
     hashtags: string | null;
   }) => {
     setType(((p.type as "POST" | "REEL" | "CAROUSEL") ?? "POST"));
-    setAccountId(p.account_id ?? "");
+    setAccountIds(p.account_id ? [p.account_id] : []);
     setMediaUrl(p.media_url ?? "");
     setCoverUrl(p.cover_url ?? "");
     setCarousel((p.carousel_urls ?? []).join("\n"));
@@ -121,7 +121,8 @@ function Composer() {
     if (!source) return;
     duplicatedRef.current = duplicar;
     loadPost(source);
-    setScheduledAt("");
+    setSchedDate("");
+    setSchedTime("");
     setExtraTimes([]);
     toast.info("Post duplicado — escolha os novos horários.");
   }, [duplicar, posts.data]);
