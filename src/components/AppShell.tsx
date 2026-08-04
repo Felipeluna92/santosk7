@@ -10,10 +10,12 @@ import {
   Settings2,
   Instagram,
   Menu,
+  LogOut,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -69,6 +71,18 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
           <p className="text-xs font-medium">Instagram conectado</p>
           <p className="text-[10px] text-muted-foreground">Conexão oficial ativa</p>
         </div>
+        <button
+          type="button"
+          aria-label="Sair"
+          title="Sair"
+          className="ml-auto text-muted-foreground transition-colors hover:text-foreground"
+          onClick={async () => {
+            await supabase.auth.signOut();
+            window.location.href = "/auth";
+          }}
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
       </div>
     </>
   );
