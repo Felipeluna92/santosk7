@@ -130,11 +130,15 @@ function Composer() {
 
   const capabilityError = (() => {
     if (!accountList.length) return "Conecte uma conta Instagram profissional para publicar.";
-    if (!accountId) return "Selecione a conta que vai publicar.";
-    if (account && account.account_type && !["BUSINESS", "CREATOR", "MEDIA_CREATOR"].includes(account.account_type))
-      return "A publicação pela API oficial exige conta Business ou Creator.";
-    if (account && !(account.scopes ?? []).includes("instagram_business_content_publish"))
-      return "A conta não tem a permissão instagram_business_content_publish aprovada.";
+    if (!accountIds.length) return "Selecione ao menos uma conta que vai publicar.";
+    const bad = selectedAccounts.find(
+      (a) => a.account_type && !["BUSINESS", "CREATOR", "MEDIA_CREATOR"].includes(a.account_type),
+    );
+    if (bad) return `@${bad.username}: a publicação pela API oficial exige conta Business ou Creator.`;
+    const noScope = selectedAccounts.find(
+      (a) => !(a.scopes ?? []).includes("instagram_business_content_publish"),
+    );
+    if (noScope) return `@${noScope.username} não tem a permissão instagram_business_content_publish aprovada.`;
     return null;
   })();
 
