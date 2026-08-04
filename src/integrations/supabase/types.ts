@@ -52,6 +52,50 @@ export type Database = {
           },
         ]
       }
+      account_daily_metrics: {
+        Row: {
+          account_id: string
+          created_at: string
+          day: string
+          followers: number | null
+          id: string
+          profile_views: number | null
+          reach: number | null
+          unavailable_metrics: string[]
+          views: number | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          day: string
+          followers?: number | null
+          id?: string
+          profile_views?: number | null
+          reach?: number | null
+          unavailable_metrics?: string[]
+          views?: number | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          day?: string
+          followers?: number | null
+          id?: string
+          profile_views?: number | null
+          reach?: number | null
+          unavailable_metrics?: string[]
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_daily_metrics_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       account_tokens: {
         Row: {
           access_token: string
@@ -95,6 +139,98 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      ig_media: {
+        Row: {
+          account_id: string
+          api_version: string | null
+          caption: string | null
+          comments: number | null
+          created_at: string
+          duration_seconds: number | null
+          format: string
+          hashtags: string[]
+          id: string
+          ig_media_id: string
+          last_synced_at: string | null
+          likes: number | null
+          media_product_type: string | null
+          media_type: string | null
+          media_url: string | null
+          permalink: string | null
+          published_at: string | null
+          reach: number | null
+          saved: number | null
+          shares: number | null
+          thumbnail_url: string | null
+          total_interactions: number | null
+          unavailable_metrics: string[]
+          updated_at: string
+          views: number | null
+        }
+        Insert: {
+          account_id: string
+          api_version?: string | null
+          caption?: string | null
+          comments?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          format?: string
+          hashtags?: string[]
+          id?: string
+          ig_media_id: string
+          last_synced_at?: string | null
+          likes?: number | null
+          media_product_type?: string | null
+          media_type?: string | null
+          media_url?: string | null
+          permalink?: string | null
+          published_at?: string | null
+          reach?: number | null
+          saved?: number | null
+          shares?: number | null
+          thumbnail_url?: string | null
+          total_interactions?: number | null
+          unavailable_metrics?: string[]
+          updated_at?: string
+          views?: number | null
+        }
+        Update: {
+          account_id?: string
+          api_version?: string | null
+          caption?: string | null
+          comments?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          format?: string
+          hashtags?: string[]
+          id?: string
+          ig_media_id?: string
+          last_synced_at?: string | null
+          likes?: number | null
+          media_product_type?: string | null
+          media_type?: string | null
+          media_url?: string | null
+          permalink?: string | null
+          published_at?: string | null
+          reach?: number | null
+          saved?: number | null
+          shares?: number | null
+          thumbnail_url?: string | null
+          total_interactions?: number | null
+          unavailable_metrics?: string[]
+          updated_at?: string
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_media_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       instagram_accounts: {
         Row: {
@@ -200,6 +336,62 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      media_snapshots: {
+        Row: {
+          age_hours: number
+          captured_at: string
+          comments: number | null
+          id: string
+          likes: number | null
+          media_row_id: string
+          reach: number | null
+          saved: number | null
+          shares: number | null
+          total_interactions: number | null
+          unavailable_metrics: string[]
+          views: number | null
+          window_label: string
+        }
+        Insert: {
+          age_hours: number
+          captured_at?: string
+          comments?: number | null
+          id?: string
+          likes?: number | null
+          media_row_id: string
+          reach?: number | null
+          saved?: number | null
+          shares?: number | null
+          total_interactions?: number | null
+          unavailable_metrics?: string[]
+          views?: number | null
+          window_label: string
+        }
+        Update: {
+          age_hours?: number
+          captured_at?: string
+          comments?: number | null
+          id?: string
+          likes?: number | null
+          media_row_id?: string
+          reach?: number | null
+          saved?: number | null
+          shares?: number | null
+          total_interactions?: number | null
+          unavailable_metrics?: string[]
+          views?: number | null
+          window_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_snapshots_media_row_id_fkey"
+            columns: ["media_row_id"]
+            isOneToOne: false
+            referencedRelation: "ig_media"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       posts: {
         Row: {
@@ -323,6 +515,45 @@ export type Database = {
           setup_completed?: boolean
           timezone?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      sync_executions: {
+        Row: {
+          accounts_processed: number
+          errors: number
+          finished_at: string | null
+          id: string
+          kind: string
+          media_upserted: number
+          message: string | null
+          snapshots_written: number
+          started_at: string
+          status: string
+        }
+        Insert: {
+          accounts_processed?: number
+          errors?: number
+          finished_at?: string | null
+          id?: string
+          kind?: string
+          media_upserted?: number
+          message?: string | null
+          snapshots_written?: number
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          accounts_processed?: number
+          errors?: number
+          finished_at?: string | null
+          id?: string
+          kind?: string
+          media_upserted?: number
+          message?: string | null
+          snapshots_written?: number
+          started_at?: string
+          status?: string
         }
         Relationships: []
       }

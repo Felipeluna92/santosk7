@@ -11,6 +11,8 @@ import {
   Instagram,
   Menu,
   LogOut,
+  Sparkles,
+
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -20,7 +22,9 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/", label: "Painel", icon: LayoutDashboard },
+  { to: "/ai", label: "AI Cálica", icon: Sparkles },
   { to: "/contas", label: "Contas", icon: AtSign },
+
   { to: "/composer", label: "Publicar", icon: PenSquare },
   { to: "/calendario", label: "Calendário", icon: CalendarDays },
   { to: "/biblioteca", label: "Biblioteca", icon: Images },
