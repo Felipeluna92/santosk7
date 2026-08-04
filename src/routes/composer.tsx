@@ -77,20 +77,24 @@ function Composer() {
   const posts = useQuery(postsQuery);
 
   const [type, setType] = useState<"POST" | "REEL" | "CAROUSEL">("POST");
-  const [accountId, setAccountId] = useState<string>("");
+  const [accountIds, setAccountIds] = useState<string[]>([]);
   const [mediaUrl, setMediaUrl] = useState(midia ?? "");
   const [carousel, setCarousel] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [schedDate, setSchedDate] = useState("");
+  const [schedTime, setSchedTime] = useState("");
   const [extraTimes, setExtraTimes] = useState<string[]>([]);
   const [newTime, setNewTime] = useState("");
 
   const accountList = accounts.data ?? [];
-  const account = accountList.find((a) => a.id === accountId);
+  const selectedAccounts = accountList.filter((a) => accountIds.includes(a.id));
+  const account = selectedAccounts[0];
   const drafts = (posts.data ?? []).filter((p) => p.status === "draft");
   const carouselUrls = carousel.split(/\s|\n|,/).map((s) => s.trim()).filter(Boolean);
+  const scheduledAt = schedDate && schedTime ? `${schedDate}T${schedTime}` : "";
+
 
   const loadPost = (p: {
     type: string;
