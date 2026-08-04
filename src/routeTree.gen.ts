@@ -19,6 +19,7 @@ import { Route as AuthenticatedConfiguracaoRouteImport } from './routes/_authent
 import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
 import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated/historico'
 import { Route as AuthenticatedLogsRouteImport } from './routes/_authenticated/logs'
+import { Route as ApiPublicHooksMonitorAccountsRouteImport } from './routes/api/public/hooks/monitor-accounts'
 import { Route as ApiPublicHooksPublishScheduledRouteImport } from './routes/api/public/hooks/publish-scheduled'
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media/$'
 import { Route as ApiPublicOauthInstagramCallbackRouteImport } from './routes/api/public/oauth/instagram/callback'
@@ -73,6 +74,12 @@ const AuthenticatedLogsRoute = AuthenticatedLogsRouteImport.update({
   path: '/logs',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicHooksMonitorAccountsRoute =
+  ApiPublicHooksMonitorAccountsRouteImport.update({
+    id: '/api/public/hooks/monitor-accounts',
+    path: '/api/public/hooks/monitor-accounts',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksPublishScheduledRoute =
   ApiPublicHooksPublishScheduledRouteImport.update({
     id: '/api/public/hooks/publish-scheduled',
@@ -101,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/contas': typeof AuthenticatedContasRoute
   '/historico': typeof AuthenticatedHistoricoRoute
   '/logs': typeof AuthenticatedLogsRoute
+  '/api/public/hooks/monitor-accounts': typeof ApiPublicHooksMonitorAccountsRoute
   '/api/public/hooks/publish-scheduled': typeof ApiPublicHooksPublishScheduledRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
@@ -115,6 +123,7 @@ export interface FileRoutesByTo {
   '/historico': typeof AuthenticatedHistoricoRoute
   '/logs': typeof AuthenticatedLogsRoute
   '/': typeof AuthenticatedIndexRoute
+  '/api/public/hooks/monitor-accounts': typeof ApiPublicHooksMonitorAccountsRoute
   '/api/public/hooks/publish-scheduled': typeof ApiPublicHooksPublishScheduledRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
@@ -131,6 +140,7 @@ export interface FileRoutesById {
   '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
   '/_authenticated/logs': typeof AuthenticatedLogsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/api/public/hooks/monitor-accounts': typeof ApiPublicHooksMonitorAccountsRoute
   '/api/public/hooks/publish-scheduled': typeof ApiPublicHooksPublishScheduledRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/contas'
     | '/historico'
     | '/logs'
+    | '/api/public/hooks/monitor-accounts'
     | '/api/public/hooks/publish-scheduled'
     | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/historico'
     | '/logs'
     | '/'
+    | '/api/public/hooks/monitor-accounts'
     | '/api/public/hooks/publish-scheduled'
     | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
@@ -176,6 +188,7 @@ export interface FileRouteTypes {
     | '/_authenticated/historico'
     | '/_authenticated/logs'
     | '/_authenticated/'
+    | '/api/public/hooks/monitor-accounts'
     | '/api/public/hooks/publish-scheduled'
     | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
@@ -184,6 +197,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicHooksMonitorAccountsRoute: typeof ApiPublicHooksMonitorAccountsRoute
   ApiPublicHooksPublishScheduledRoute: typeof ApiPublicHooksPublishScheduledRoute
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
   ApiPublicOauthInstagramCallbackRoute: typeof ApiPublicOauthInstagramCallbackRoute
@@ -261,6 +275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLogsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/hooks/monitor-accounts': {
+      id: '/api/public/hooks/monitor-accounts'
+      path: '/api/public/hooks/monitor-accounts'
+      fullPath: '/api/public/hooks/monitor-accounts'
+      preLoaderRoute: typeof ApiPublicHooksMonitorAccountsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/publish-scheduled': {
       id: '/api/public/hooks/publish-scheduled'
       path: '/api/public/hooks/publish-scheduled'
@@ -313,6 +334,7 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicHooksMonitorAccountsRoute: ApiPublicHooksMonitorAccountsRoute,
   ApiPublicHooksPublishScheduledRoute: ApiPublicHooksPublishScheduledRoute,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
   ApiPublicOauthInstagramCallbackRoute: ApiPublicOauthInstagramCallbackRoute,
@@ -320,13 +342,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
