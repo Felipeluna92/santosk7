@@ -288,7 +288,8 @@ function Composer() {
                       variant="outline"
                       onClick={() => {
                         loadPost(d);
-                        setScheduledAt("");
+                        setSchedDate("");
+                        setSchedTime("");
                         setExtraTimes([]);
                         setType(((d.type as typeof type) ?? "POST"));
                         toast.info("Cópia criada — escolha os novos horários.");
@@ -309,24 +310,49 @@ function Composer() {
             <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
               <div className="panel min-w-0 space-y-4 p-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Conta</Label>
-                  <Select value={accountId} onValueChange={setAccountId}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="Selecione a conta" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accountList.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          @{a.username} · {a.account_type}
-                        </SelectItem>
-                      ))}
-                      {accountList.length === 0 ? (
-                        <SelectItem value="none" disabled>
-                          Nenhuma conta conectada
-                        </SelectItem>
-                      ) : null}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-xs">Contas ({accountIds.length} selecionada(s))</Label>
+                    {accountList.length > 1 ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={() =>
+                          setAccountIds(
+                            accountIds.length === accountList.length ? [] : accountList.map((a) => a.id),
+                          )
+                        }
+                      >
+                        {accountIds.length === accountList.length ? "Limpar" : "Selecionar todas"}
+                      </Button>
+                    ) : null}
+                  </div>
+                  <div className="space-y-1 rounded-md border border-border bg-background p-2">
+                    {accountList.length === 0 ? (
+                      <p className="px-1 py-2 text-[11px] text-muted-foreground">Nenhuma conta conectada</p>
+                    ) : (
+                      accountList.map((a) => (
+                        <label
+                          key={a.id}
+                          className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1.5 text-[12px] hover:bg-secondary/50"
+                        >
+                          <input
+                            type="checkbox"
+                            className="accent-primary"
+                            checked={accountIds.includes(a.id)}
+                            onChange={(e) =>
+                              setAccountIds((prev) =>
+                                e.target.checked ? [...prev, a.id] : prev.filter((x) => x !== a.id),
+                              )
+                            }
+                          />
+                          <span className="truncate">@{a.username}</span>
+                          <span className="ml-auto text-[10px] text-muted-foreground">{a.account_type}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
                 </div>
 
                 {t === "CAROUSEL" ? (
@@ -403,14 +429,31 @@ function Composer() {
                       className="bg-background"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Agendar para</Label>
-                    <Input
-                      type="datetime-local"
-                      value={scheduledAt}
-                      onChange={(e) => setScheduledAt(e.target.value)}
-                      className="bg-background"
-                    />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Data</Label>
+                      <Input
+                        type="date"
+                        value={schedDate}
+                        onChange={(e) => setSchedDate(e.target.value)}
+                        className="bg-background"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Horário</Label>
+                      <Select value={schedTime} onValueChange={setSchedTime}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-64">
+                          {TIME_SLOTS.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
