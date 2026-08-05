@@ -467,13 +467,26 @@ export async function publishPendingNow() {
     .eq("status", "publishing")
     .lt("updated_at", staleCutoff);
 
+  // Posts sem conta (conta removida) nunca podem ser publicados: marca como falha
+  // para que não ocupem a fila indefinidamente.
+  await supabaseAdmin
+    .from("posts")
+    .update({
+      status: "failed",
+      error_message: "A conta desta publicação foi removida do app.",
+    })
+    .eq("status", "scheduled")
+    .is("account_id", null);
+
   const { data: pending } = await supabaseAdmin
     .from("posts")
     .select("id")
     .eq("status", "scheduled")
+    .not("account_id", "is", null)
     .lte("scheduled_at", new Date().toISOString())
     .order("scheduled_at", { ascending: true })
     .limit(10);
+
 
   const startedAt = Date.now();
   const BUDGET_MS = 50_000;
