@@ -172,7 +172,17 @@ function Historico() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1.5">
-                      <Button asChild size="sm" variant="secondary" className="h-7 text-[11px]">
+                      {isLate(p) ? (
+                        <Button
+                          size="sm"
+                          className="h-7 text-[11px]"
+                          disabled={forcePublish.isPending}
+                          onClick={() => forcePublish.mutate(p.id)}
+                        >
+                          <Send className="h-3 w-3" /> Postar agora
+                        </Button>
+                      ) : null}
+
                         <Link to="/composer" search={{ duplicar: p.id }}>
                           <Copy className="h-3 w-3" /> Duplicar
                         </Link>
