@@ -329,22 +329,31 @@ export async function publishPostById(postId: string) {
 
   const { data: post } = await supabaseAdmin.from("posts").select("*").eq("id", postId).single();
   if (!post) throw new Error("Post não encontrado.");
-  if (!post.account_id) throw new Error("Selecione uma conta antes de publicar.");
+
+  /** Falhas de pré-checagem precisam marcar o post, senão ele trava a fila para sempre. */
+  const abort = async (message: string) => {
+    await supabaseAdmin.from("posts").update({ status: "failed", error_message: message }).eq("id", postId);
+    await writeLog("publish", "error", message, { postId });
+    throw new Error(message);
+  };
+
+  if (!post.account_id) await abort("A conta desta publicação foi removida do app. Selecione outra conta.");
 
   const { data: account } = await supabaseAdmin
     .from("instagram_accounts")
     .select("*")
     .eq("id", post.account_id)
-    .single();
-  if (!account) throw new Error("Conta não encontrada.");
-  if (!(account.scopes ?? []).includes("instagram_business_content_publish")) {
-    throw new Error(
+    .maybeSingle();
+  if (!account) await abort("Conta não encontrada ou removida do app.");
+  if (!(account!.scopes ?? []).includes("instagram_business_content_publish")) {
+    await abort(
       "Esta conta não tem a permissão instagram_business_content_publish aprovada. Reconecte concedendo a permissão.",
     );
   }
-  if (account.account_type && !["BUSINESS", "CREATOR", "MEDIA_CREATOR"].includes(account.account_type)) {
-    throw new Error("Publicação só é permitida em contas Instagram Business ou Creator.");
+  if (account!.account_type && !["BUSINESS", "CREATOR", "MEDIA_CREATOR"].includes(account!.account_type)) {
+    await abort("Publicação só é permitida em contas Instagram Business ou Creator.");
   }
+
 
   await supabaseAdmin.from("posts").update({ status: "publishing", error_message: null }).eq("id", postId);
 
