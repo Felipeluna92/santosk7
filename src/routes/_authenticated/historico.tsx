@@ -182,8 +182,9 @@ function Historico() {
                           <Send className="h-3 w-3" /> Postar agora
                         </Button>
                       ) : null}
-
+                      <Button asChild size="sm" variant="secondary" className="h-7 text-[11px]">
                         <Link to="/composer" search={{ duplicar: p.id }}>
+
                           <Copy className="h-3 w-3" /> Duplicar
                         </Link>
                       </Button>
