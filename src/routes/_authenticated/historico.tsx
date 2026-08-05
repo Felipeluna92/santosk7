@@ -58,6 +58,22 @@ function Historico() {
   const nameOf = (id: string | null) =>
     accounts.data?.find((a) => a.id === id)?.username ?? "—";
 
+  const publishNow = useServerFn(publishPost);
+  const forcePublish = useMutation({
+    mutationFn: async (postId: string) => publishNow({ data: { postId } }),
+    onSuccess: () => {
+      toast.success("Publicação enviada para a API oficial.");
+      qc.invalidateQueries({ queryKey: ["posts"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Não foi possível publicar agora."),
+  });
+
+  /** Atrasado: agendado (ou falhou) e o horário já passou. */
+  const isLate = (p: { status: string; scheduled_at: string | null }) =>
+    (p.status === "scheduled" || p.status === "failed") &&
+    Boolean(p.scheduled_at) &&
+    new Date(p.scheduled_at as string).getTime() <= Date.now();
+
   const deleteOne = useMutation({
     mutationFn: async (postId: string) => {
       const { error } = await supabase.from("posts").delete().eq("id", postId);
@@ -69,6 +85,7 @@ function Historico() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const rows = (posts.data ?? []).filter(
     (p) =>
