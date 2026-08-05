@@ -338,11 +338,12 @@ export async function publishPostById(postId: string) {
   };
 
   if (!post.account_id) await abort("A conta desta publicação foi removida do app. Selecione outra conta.");
+  const accountId = post.account_id!;
 
   const { data: account } = await supabaseAdmin
     .from("instagram_accounts")
     .select("*")
-    .eq("id", post.account_id)
+    .eq("id", accountId)
     .maybeSingle();
   if (!account) await abort("Conta não encontrada ou removida do app.");
   if (!(account!.scopes ?? []).includes("instagram_business_content_publish")) {
@@ -354,12 +355,12 @@ export async function publishPostById(postId: string) {
     await abort("Publicação só é permitida em contas Instagram Business ou Creator.");
   }
 
-
   await supabaseAdmin.from("posts").update({ status: "publishing", error_message: null }).eq("id", postId);
 
   try {
-    const token = await tokenFor(post.account_id);
-    const igId = account.instagram_user_id;
+    const token = await tokenFor(accountId);
+    const igId = account!.instagram_user_id;
+
     const caption = [post.caption ?? "", post.hashtags ?? ""].filter(Boolean).join("\n\n");
     let containerId: string;
 
