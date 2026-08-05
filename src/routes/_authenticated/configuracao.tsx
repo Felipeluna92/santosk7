@@ -27,9 +27,10 @@ export const Route = createFileRoute("/_authenticated/configuracao")({
       },
     ],
   }),
-  validateSearch: (search: Record<string, unknown>) => ({
-    erro: typeof search["erro"] === "string" ? (search["erro"] as string) : undefined,
+  validateSearch: (search: Record<string, unknown>): { erro?: string } => ({
+    ...(typeof search["erro"] === "string" ? { erro: search["erro"] as string } : {}),
   }),
+
   component: Configuracao,
 });
 
