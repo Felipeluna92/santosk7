@@ -28,9 +28,10 @@ export const Route = createFileRoute("/_authenticated/contas")({
       },
     ],
   }),
-  validateSearch: (search: Record<string, unknown>) => ({
-    conectado: typeof search["conectado"] === "string" ? (search["conectado"] as string) : undefined,
+  validateSearch: (search: Record<string, unknown>): { conectado?: string } => ({
+    ...(typeof search["conectado"] === "string" ? { conectado: search["conectado"] as string } : {}),
   }),
+
   component: ContasPage,
 });
 

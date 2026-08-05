@@ -329,28 +329,38 @@ export async function publishPostById(postId: string) {
 
   const { data: post } = await supabaseAdmin.from("posts").select("*").eq("id", postId).single();
   if (!post) throw new Error("Post não encontrado.");
-  if (!post.account_id) throw new Error("Selecione uma conta antes de publicar.");
+
+  /** Falhas de pré-checagem precisam marcar o post, senão ele trava a fila para sempre. */
+  const abort = async (message: string) => {
+    await supabaseAdmin.from("posts").update({ status: "failed", error_message: message }).eq("id", postId);
+    await writeLog("publish", "error", message, { postId });
+    throw new Error(message);
+  };
+
+  if (!post.account_id) await abort("A conta desta publicação foi removida do app. Selecione outra conta.");
+  const accountId = post.account_id!;
 
   const { data: account } = await supabaseAdmin
     .from("instagram_accounts")
     .select("*")
-    .eq("id", post.account_id)
-    .single();
-  if (!account) throw new Error("Conta não encontrada.");
-  if (!(account.scopes ?? []).includes("instagram_business_content_publish")) {
-    throw new Error(
+    .eq("id", accountId)
+    .maybeSingle();
+  if (!account) await abort("Conta não encontrada ou removida do app.");
+  if (!(account!.scopes ?? []).includes("instagram_business_content_publish")) {
+    await abort(
       "Esta conta não tem a permissão instagram_business_content_publish aprovada. Reconecte concedendo a permissão.",
     );
   }
-  if (account.account_type && !["BUSINESS", "CREATOR", "MEDIA_CREATOR"].includes(account.account_type)) {
-    throw new Error("Publicação só é permitida em contas Instagram Business ou Creator.");
+  if (account!.account_type && !["BUSINESS", "CREATOR", "MEDIA_CREATOR"].includes(account!.account_type)) {
+    await abort("Publicação só é permitida em contas Instagram Business ou Creator.");
   }
 
   await supabaseAdmin.from("posts").update({ status: "publishing", error_message: null }).eq("id", postId);
 
   try {
-    const token = await tokenFor(post.account_id);
-    const igId = account.instagram_user_id;
+    const token = await tokenFor(accountId);
+    const igId = account!.instagram_user_id;
+
     const caption = [post.caption ?? "", post.hashtags ?? ""].filter(Boolean).join("\n\n");
     let containerId: string;
 
@@ -457,13 +467,26 @@ export async function publishPendingNow() {
     .eq("status", "publishing")
     .lt("updated_at", staleCutoff);
 
+  // Posts sem conta (conta removida) nunca podem ser publicados: marca como falha
+  // para que não ocupem a fila indefinidamente.
+  await supabaseAdmin
+    .from("posts")
+    .update({
+      status: "failed",
+      error_message: "A conta desta publicação foi removida do app.",
+    })
+    .eq("status", "scheduled")
+    .is("account_id", null);
+
   const { data: pending } = await supabaseAdmin
     .from("posts")
     .select("id")
     .eq("status", "scheduled")
+    .not("account_id", "is", null)
     .lte("scheduled_at", new Date().toISOString())
     .order("scheduled_at", { ascending: true })
     .limit(10);
+
 
   const startedAt = Date.now();
   const BUDGET_MS = 50_000;
