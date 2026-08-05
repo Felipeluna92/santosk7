@@ -1,8 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { History, Copy, Trash2 } from "lucide-react";
+import { History, Copy, Trash2, Send } from "lucide-react";
 import { toast } from "sonner";
+
+import { publishPost } from "@/lib/meta.functions";
+
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -54,6 +58,22 @@ function Historico() {
   const nameOf = (id: string | null) =>
     accounts.data?.find((a) => a.id === id)?.username ?? "—";
 
+  const publishNow = useServerFn(publishPost);
+  const forcePublish = useMutation({
+    mutationFn: async (postId: string) => publishNow({ data: { postId } }),
+    onSuccess: () => {
+      toast.success("Publicação enviada para a API oficial.");
+      qc.invalidateQueries({ queryKey: ["posts"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Não foi possível publicar agora."),
+  });
+
+  /** Atrasado: agendado (ou falhou) e o horário já passou. */
+  const isLate = (p: { status: string; scheduled_at: string | null }) =>
+    (p.status === "scheduled" || p.status === "failed") &&
+    Boolean(p.scheduled_at) &&
+    new Date(p.scheduled_at as string).getTime() <= Date.now();
+
   const deleteOne = useMutation({
     mutationFn: async (postId: string) => {
       const { error } = await supabase.from("posts").delete().eq("id", postId);
@@ -65,6 +85,7 @@ function Historico() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const rows = (posts.data ?? []).filter(
     (p) =>
@@ -151,8 +172,19 @@ function Historico() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1.5">
+                      {isLate(p) ? (
+                        <Button
+                          size="sm"
+                          className="h-7 text-[11px]"
+                          disabled={forcePublish.isPending}
+                          onClick={() => forcePublish.mutate(p.id)}
+                        >
+                          <Send className="h-3 w-3" /> Postar agora
+                        </Button>
+                      ) : null}
                       <Button asChild size="sm" variant="secondary" className="h-7 text-[11px]">
                         <Link to="/composer" search={{ duplicar: p.id }}>
+
                           <Copy className="h-3 w-3" /> Duplicar
                         </Link>
                       </Button>
