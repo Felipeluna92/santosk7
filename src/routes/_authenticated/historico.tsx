@@ -1,8 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { History, Copy, Trash2 } from "lucide-react";
+import { History, Copy, Trash2, Send } from "lucide-react";
 import { toast } from "sonner";
+
+import { publishPost } from "@/lib/meta.functions";
+
 
 import { supabase } from "@/integrations/supabase/client";
 
