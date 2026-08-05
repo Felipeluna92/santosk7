@@ -50,10 +50,11 @@ export const Route = createFileRoute("/_authenticated/composer")({
       },
     ],
   }),
-  validateSearch: (search: Record<string, unknown>) => ({
-    midia: typeof search["midia"] === "string" ? (search["midia"] as string) : undefined,
-    duplicar: typeof search["duplicar"] === "string" ? (search["duplicar"] as string) : undefined,
+  validateSearch: (search: Record<string, unknown>): { midia?: string; duplicar?: string } => ({
+    ...(typeof search["midia"] === "string" ? { midia: search["midia"] as string } : {}),
+    ...(typeof search["duplicar"] === "string" ? { duplicar: search["duplicar"] as string } : {}),
   }),
+
   component: Composer,
 });
 
