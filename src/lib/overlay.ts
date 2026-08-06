@@ -1,4 +1,7 @@
-export type Overlay = {
+export type OverlayItem = {
+  id: string;
+  /** "caption" = texto livre, "mention" = marcação @usuario */
+  kind: "caption" | "mention";
   text: string;
   /** posição do centro do texto, em % da largura/altura da mídia */
   xPct: number;
@@ -10,45 +13,67 @@ export type Overlay = {
   backgroundOn: boolean;
 };
 
-export const DEFAULT_OVERLAY: Overlay = {
-  text: "",
-  xPct: 50,
-  yPct: 82,
-  sizePct: 4.5,
-  color: "#ffffff",
-  background: "#000000",
-  backgroundOn: true,
-};
+export type Overlay = OverlayItem[];
 
-function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, o: Overlay) {
-  const text = o.text.trim();
-  if (!text) return;
+export const DEFAULT_OVERLAY: Overlay = [];
+
+export function newOverlayItem(kind: OverlayItem["kind"], index = 0): OverlayItem {
+  return {
+    id: `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    kind,
+    text: kind === "mention" ? "@usuario" : "",
+    xPct: 50,
+    yPct: kind === "mention" ? Math.min(92, 78 + index * 7) : Math.max(12, 30 + index * 7),
+    sizePct: kind === "mention" ? 4 : 5,
+    color: "#ffffff",
+    background: "#000000",
+    backgroundOn: true,
+  };
+}
+
+export function hasOverlayContent(overlay: Overlay) {
+  return overlay.some((i) => i.text.trim().length > 0);
+}
+
+function drawItem(ctx: CanvasRenderingContext2D, w: number, h: number, o: OverlayItem) {
+  const lines = o.text.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return;
   const fontSize = Math.max(12, (o.sizePct / 100) * h);
   ctx.font = `600 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  const metrics = ctx.measureText(text);
+
+  const lineH = fontSize * 1.25;
   const padX = fontSize * 0.45;
   const padY = fontSize * 0.3;
-  const x = (o.xPct / 100) * w;
-  const y = (o.yPct / 100) * h;
+  const cx = (o.xPct / 100) * w;
+  const cy = (o.yPct / 100) * h;
+  const widest = Math.max(...lines.map((l) => ctx.measureText(l).width));
+  const blockH = lineH * lines.length;
 
   if (o.backgroundOn) {
-    const boxW = metrics.width + padX * 2;
-    const boxH = fontSize + padY * 2;
+    const boxW = widest + padX * 2;
+    const boxH = blockH + padY * 2;
     const r = Math.min(boxH / 2, fontSize * 0.4);
     ctx.fillStyle = o.background;
     ctx.beginPath();
-    ctx.roundRect(x - boxW / 2, y - boxH / 2, boxW, boxH, r);
+    ctx.roundRect(cx - boxW / 2, cy - boxH / 2, boxW, boxH, r);
     ctx.fill();
   }
+
   ctx.fillStyle = o.color;
-  ctx.fillText(text, x, y);
+  lines.forEach((line, i) => {
+    ctx.fillText(line, cx, cy - blockH / 2 + lineH * (i + 0.5));
+  });
+}
+
+function drawOverlay(ctx: CanvasRenderingContext2D, w: number, h: number, overlay: Overlay) {
+  overlay.forEach((item) => drawItem(ctx, w, h, item));
 }
 
 /** Grava o texto diretamente na imagem e devolve um novo arquivo JPEG. */
 export async function burnImageOverlay(file: File, overlay: Overlay): Promise<File> {
-  if (!overlay.text.trim()) return file;
+  if (!hasOverlayContent(overlay)) return file;
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();
@@ -93,7 +118,7 @@ export async function burnVideoOverlay(
   overlay: Overlay,
   onProgress?: (pct: number) => void,
 ): Promise<File> {
-  if (!overlay.text.trim()) return file;
+  if (!hasOverlayContent(overlay)) return file;
   const mimeType = mp4RecorderType();
   if (!mimeType) {
     throw new Error(

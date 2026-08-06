@@ -1,18 +1,21 @@
 import { useCallback, useRef, useState } from "react";
-import { Upload, X, Loader2, Info, Type } from "lucide-react";
+import { Upload, X, Loader2, Info, Type, Plus, AtSign, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { uploadLocalFile, removeUploadedFile, pathFromPublicUrl } from "@/lib/uploads";
 import {
   DEFAULT_OVERLAY,
   burnImageOverlay,
   burnVideoOverlay,
   canBurnVideoOverlay,
+  newOverlayItem,
   validateStoryFile,
   type Overlay,
+  type OverlayItem,
 } from "@/lib/overlay";
 
 type Props = {
@@ -28,10 +31,26 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [localUrl, setLocalUrl] = useState("");
   const [overlay, setOverlay] = useState<Overlay>(DEFAULT_OVERLAY);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
 
   const accept = kind === "image" ? "image/jpeg,image/png" : "video/mp4,video/quicktime";
+  const active = overlay.find((i) => i.id === activeId) ?? null;
+
+  const patchActive = (patch: Partial<OverlayItem>) =>
+    setOverlay((list) => list.map((i) => (i.id === activeId ? { ...i, ...patch } : i)));
+
+  const addItem = (itemKind: OverlayItem["kind"]) => {
+    const item = newOverlayItem(itemKind, overlay.filter((i) => i.kind === itemKind).length);
+    setOverlay((list) => [...list, item]);
+    setActiveId(item.id);
+  };
+
+  const removeItem = (id: string) => {
+    setOverlay((list) => list.filter((i) => i.id !== id));
+    setActiveId((cur) => (cur === id ? null : cur));
+  };
 
   const pickFile = async (picked: File) => {
     const invalid = await validateStoryFile(picked, kind);
@@ -45,16 +64,18 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
     onChange("");
   };
 
-  const move = useCallback((clientX: number, clientY: number) => {
+  const move = useCallback((id: string, clientX: number, clientY: number) => {
     const box = stageRef.current?.getBoundingClientRect();
     if (!box) return;
     const x = ((clientX - box.left) / box.width) * 100;
     const y = ((clientY - box.top) / box.height) * 100;
-    setOverlay((o) => ({
-      ...o,
-      xPct: Math.min(98, Math.max(2, x)),
-      yPct: Math.min(98, Math.max(2, y)),
-    }));
+    setOverlay((list) =>
+      list.map((i) =>
+        i.id === id
+          ? { ...i, xPct: Math.min(98, Math.max(2, x)), yPct: Math.min(98, Math.max(2, y)) }
+          : i,
+      ),
+    );
   }, []);
 
   const send = async () => {
@@ -124,9 +145,6 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
         <div
           ref={stageRef}
           className="relative mx-auto aspect-[9/16] w-full max-w-[180px] select-none overflow-hidden rounded-lg border border-border bg-surface-2"
-          onPointerMove={(e) => {
-            if (e.buttons === 1) move(e.clientX, e.clientY);
-          }}
         >
           {localUrl ? (
             kind === "image" ? (
@@ -145,85 +163,147 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
             </button>
           )}
 
-          {overlay.text.trim() ? (
-            <div
-              role="button"
-              tabIndex={0}
-              onPointerDown={(e) => {
-                e.currentTarget.setPointerCapture(e.pointerId);
-                move(e.clientX, e.clientY);
-              }}
-              onPointerMove={(e) => {
-                if (e.currentTarget.hasPointerCapture(e.pointerId)) move(e.clientX, e.clientY);
-              }}
-              style={{
-                left: `${overlay.xPct}%`,
-                top: `${overlay.yPct}%`,
-                transform: "translate(-50%, -50%)",
-                color: overlay.color,
-                background: overlay.backgroundOn ? overlay.background : "transparent",
-              }}
-              className="absolute cursor-move whitespace-nowrap rounded-full px-2 py-0.5 font-semibold leading-tight"
-            >
-              <span style={{ fontSize: `${(overlay.sizePct / 100) * 320}px` }}>{overlay.text}</span>
-            </div>
-          ) : null}
+          {overlay
+            .filter((item) => item.text.trim())
+            .map((item) => (
+              <div
+                key={item.id}
+                role="button"
+                tabIndex={0}
+                onPointerDown={(e) => {
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                  setActiveId(item.id);
+                  move(item.id, e.clientX, e.clientY);
+                }}
+                onPointerMove={(e) => {
+                  if (e.currentTarget.hasPointerCapture(e.pointerId)) move(item.id, e.clientX, e.clientY);
+                }}
+                style={{
+                  left: `${item.xPct}%`,
+                  top: `${item.yPct}%`,
+                  transform: "translate(-50%, -50%)",
+                  color: item.color,
+                  background: item.backgroundOn ? item.background : "transparent",
+                }}
+                className={`absolute cursor-move rounded-xl px-2 py-0.5 text-center font-semibold leading-tight ${
+                  activeId === item.id ? "outline outline-1 outline-primary" : ""
+                }`}
+              >
+                <span
+                  style={{ fontSize: `${(item.sizePct / 100) * 320}px` }}
+                  className="block whitespace-pre-wrap"
+                >
+                  {item.text}
+                </span>
+              </div>
+            ))}
         </div>
 
         <div className="space-y-2.5">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Marcação visual (@usuário)</Label>
-            <Input
-              value={overlay.text}
-              onChange={(e) => setOverlay((o) => ({ ...o, text: e.target.value.slice(0, 60) }))}
-              placeholder="@usuario"
-              className="bg-background"
-            />
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="secondary" onClick={() => addItem("caption")}>
+              <Plus className="h-4 w-4" /> Legenda
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => addItem("mention")}>
+              <AtSign className="h-4 w-4" /> Marcação
+            </Button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <Label className="text-[11px]">Tamanho</Label>
-              <input
-                type="range"
-                min={2}
-                max={10}
-                step={0.25}
-                value={overlay.sizePct}
-                onChange={(e) => setOverlay((o) => ({ ...o, sizePct: Number(e.target.value) }))}
-                className="w-full accent-primary"
-              />
+          {overlay.length ? (
+            <div className="flex flex-wrap gap-1.5">
+              {overlay.map((item) => (
+                <div
+                  key={item.id}
+                  className={`flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] ${
+                    activeId === item.id
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground"
+                  }`}
+                >
+                  <button type="button" onClick={() => setActiveId(item.id)} className="max-w-[120px] truncate">
+                    {item.text.trim() || (item.kind === "mention" ? "@..." : "Legenda")}
+                  </button>
+                  <button type="button" onClick={() => removeItem(item.id)} aria-label="Remover camada">
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
             </div>
-            <div className="flex items-end gap-2">
-              <div className="space-y-1">
-                <Label className="text-[11px]">Texto</Label>
-                <input
-                  type="color"
-                  value={overlay.color}
-                  onChange={(e) => setOverlay((o) => ({ ...o, color: e.target.value }))}
-                  className="h-8 w-10 rounded border border-border bg-background"
-                />
+          ) : (
+            <p className="text-[11px] text-muted-foreground">
+              Adicione uma legenda e quantas marcações quiser; arraste cada uma na prévia.
+            </p>
+          )}
+
+          {active ? (
+            <>
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  {active.kind === "mention" ? "Marcação visual (@usuário)" : "Texto da legenda"}
+                </Label>
+                {active.kind === "mention" ? (
+                  <Input
+                    value={active.text}
+                    onChange={(e) => patchActive({ text: e.target.value.slice(0, 60) })}
+                    placeholder="@usuario"
+                    className="bg-background"
+                  />
+                ) : (
+                  <Textarea
+                    value={active.text}
+                    onChange={(e) => patchActive({ text: e.target.value.slice(0, 200) })}
+                    placeholder="Escreva a legenda do Story"
+                    rows={3}
+                    className="bg-background"
+                  />
+                )}
               </div>
-              <div className="space-y-1">
-                <Label className="text-[11px]">Fundo</Label>
-                <input
-                  type="color"
-                  value={overlay.background}
-                  onChange={(e) => setOverlay((o) => ({ ...o, background: e.target.value }))}
-                  className="h-8 w-10 rounded border border-border bg-background"
-                />
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[11px]">Tamanho</Label>
+                  <input
+                    type="range"
+                    min={2}
+                    max={10}
+                    step={0.25}
+                    value={active.sizePct}
+                    onChange={(e) => patchActive({ sizePct: Number(e.target.value) })}
+                    className="w-full accent-primary"
+                  />
+                </div>
+                <div className="flex items-end gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">Texto</Label>
+                    <input
+                      type="color"
+                      value={active.color}
+                      onChange={(e) => patchActive({ color: e.target.value })}
+                      className="h-8 w-10 rounded border border-border bg-background"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">Fundo</Label>
+                    <input
+                      type="color"
+                      value={active.background}
+                      onChange={(e) => patchActive({ background: e.target.value })}
+                      className="h-8 w-10 rounded border border-border bg-background"
+                    />
+                  </div>
+                  <label className="flex items-center gap-1 pb-1.5 text-[11px] text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      className="accent-primary"
+                      checked={active.backgroundOn}
+                      onChange={(e) => patchActive({ backgroundOn: e.target.checked })}
+                    />
+                    usar
+                  </label>
+                </div>
               </div>
-              <label className="flex items-center gap-1 pb-1.5 text-[11px] text-muted-foreground">
-                <input
-                  type="checkbox"
-                  className="accent-primary"
-                  checked={overlay.backgroundOn}
-                  onChange={(e) => setOverlay((o) => ({ ...o, backgroundOn: e.target.checked }))}
-                />
-                usar
-              </label>
-            </div>
-          </div>
+            </>
+          ) : null}
 
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="secondary" disabled={busy} onClick={() => inputRef.current?.click()}>
@@ -235,7 +315,7 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
                 ? progress !== null
                   ? `Gravando texto... ${progress}%`
                   : "Preparando..."
-                : "Aplicar marcação e enviar"}
+                : "Aplicar textos e enviar"}
             </Button>
             {value ? (
               <Button size="icon" variant="ghost" onClick={() => void clear()} aria-label="Remover mídia">
@@ -259,7 +339,7 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
 
           <p className="flex gap-1.5 rounded-md bg-secondary/60 p-2.5 text-[11px] text-muted-foreground">
             <Info className="mt-px h-3.5 w-3.5 shrink-0" />
-            Marcação visual; a API não cria menção clicável nem envia notificação. O texto é gravado no
+            Marcação visual; a API não cria menção clicável nem envia notificação. Os textos são gravados no
             arquivo antes do upload e nenhum <code>user_tags</code> é enviado à Meta.
           </p>
         </div>
