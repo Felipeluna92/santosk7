@@ -154,8 +154,16 @@ function Historico() {
             </TableHeader>
             <TableBody>
               {rows.map((p) => (
-                <TableRow key={p.id}>
+                <TableRow key={p.id} data-state={selected.has(p.id) ? "selected" : undefined}>
+                  <TableCell className="w-8">
+                    <Checkbox
+                      checked={selected.has(p.id)}
+                      onCheckedChange={() => toggleOne(p.id)}
+                      aria-label="Selecionar post"
+                    />
+                  </TableCell>
                   <TableCell className="text-xs">@{nameOf(p.account_id)}</TableCell>
+
                   <TableCell className="text-xs">{POST_TYPE_LABEL[p.type] ?? p.type}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {fmtDate(p.published_at ?? p.scheduled_at ?? p.created_at)}
