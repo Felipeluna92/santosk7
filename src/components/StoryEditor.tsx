@@ -160,7 +160,6 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
                 left: `${overlay.xPct}%`,
                 top: `${overlay.yPct}%`,
                 transform: "translate(-50%, -50%)",
-                fontSize: `${overlay.sizePct}cqh`,
                 color: overlay.color,
                 background: overlay.backgroundOn ? overlay.background : "transparent",
               }}
