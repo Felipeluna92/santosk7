@@ -8,6 +8,7 @@ import {
   Image as ImageIcon,
   Film,
   Layers,
+  CircleDot,
   FileText,
   Info,
   Copy,
@@ -34,6 +35,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { accountsQuery, postsQuery, POST_STATUS, fmtDate } from "@/lib/data";
 import { publishPost } from "@/lib/meta.functions";
 import { MediaUpload } from "@/components/MediaUpload";
+import { StoryEditor } from "@/components/StoryEditor";
 
 export const Route = createFileRoute("/_authenticated/composer")({
   head: () => ({
@@ -83,11 +85,12 @@ function Composer() {
   const accounts = useQuery(accountsQuery);
   const posts = useQuery(postsQuery);
 
-  const [type, setType] = useState<"POST" | "REEL" | "CAROUSEL">("POST");
+  const [type, setType] = useState<"POST" | "REEL" | "CAROUSEL" | "STORY">("POST");
   const [accountIds, setAccountIds] = useState<string[]>([]);
   const [mediaUrl, setMediaUrl] = useState(midia ?? "");
   const [carousel, setCarousel] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
+  const [storyKind, setStoryKind] = useState<"image" | "video">("image");
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
   const [schedDate, setSchedDate] = useState("");
@@ -112,7 +115,7 @@ function Composer() {
     caption: string | null;
     hashtags: string | null;
   }) => {
-    setType(((p.type as "POST" | "REEL" | "CAROUSEL") ?? "POST"));
+    setType(((p.type as "POST" | "REEL" | "CAROUSEL" | "STORY") ?? "POST"));
     setAccountIds(p.account_id ? [p.account_id] : []);
     setMediaUrl(p.media_url ?? "");
     setCoverUrl(p.cover_url ?? "");
@@ -164,8 +167,8 @@ function Composer() {
   const payload = (accId: string | null, when?: string | null) => ({
     account_id: accId,
     type,
-    caption: caption || null,
-    hashtags: hashtags || null,
+    caption: type === "STORY" ? null : caption || null,
+    hashtags: type === "STORY" ? null : hashtags || null,
     media_url: type === "CAROUSEL" ? null : mediaUrl || null,
     cover_url: type === "REEL" ? coverUrl || null : null,
     carousel_urls: type === "CAROUSEL" ? carouselUrls : [],
@@ -244,7 +247,7 @@ function Composer() {
     <AppShell title="Publicar" subtitle="Criação, duplicação e agendamento em vários horários">
 
       <Tabs value={type} onValueChange={(v) => setType(v as typeof type)}>
-        <TabsList className="grid w-full grid-cols-4 gap-1 bg-surface px-1 sm:inline-flex sm:w-auto">
+        <TabsList className="grid w-full grid-cols-5 gap-1 bg-surface px-1 sm:inline-flex sm:w-auto">
           <TabsTrigger value="POST" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
             <ImageIcon className="mr-1 h-3.5 w-3.5 shrink-0" /> Post
           </TabsTrigger>
@@ -253,6 +256,9 @@ function Composer() {
           </TabsTrigger>
           <TabsTrigger value="CAROUSEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
             <Layers className="mr-1 h-3.5 w-3.5 shrink-0" /> Carrossel
+          </TabsTrigger>
+          <TabsTrigger value="STORY" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+            <CircleDot className="mr-1 h-3.5 w-3.5 shrink-0" /> Story
           </TabsTrigger>
           <TabsTrigger value="DRAFTS" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
             <FileText className="mr-1 h-3.5 w-3.5 shrink-0" /> Rascunhos
@@ -312,7 +318,7 @@ function Composer() {
           </div>
         </TabsContent>
 
-        {(["POST", "REEL", "CAROUSEL"] as const).map((t) => (
+        {(["POST", "REEL", "CAROUSEL", "STORY"] as const).map((t) => (
           <TabsContent key={t} value={t} className="mt-4">
             <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
               <div className="panel min-w-0 space-y-4 p-4">
@@ -362,7 +368,14 @@ function Composer() {
                   </div>
                 </div>
 
-                {t === "CAROUSEL" ? (
+                {t === "STORY" ? (
+                  <StoryEditor
+                    kind={storyKind}
+                    onKindChange={setStoryKind}
+                    value={mediaUrl}
+                    onChange={setMediaUrl}
+                  />
+                ) : t === "CAROUSEL" ? (
                   <div className="space-y-1.5">
                     <Label className="text-xs">URLs do carrossel (uma por linha, 2 a 10)</Label>
                     <Textarea
@@ -561,17 +574,34 @@ function Composer() {
                       {account ? `@${account.username}` : "sua.conta"}
                     </span>
                     <Badge className="ml-auto border-0 bg-secondary text-[10px] text-muted-foreground">
-                      {t === "POST" ? "Post" : t === "REEL" ? "Reel" : "Carrossel"}
+                      {t === "POST" ? "Post" : t === "REEL" ? "Reel" : t === "STORY" ? "Story" : "Carrossel"}
                     </Badge>
                   </div>
                   <div
-                    className={`flex items-center justify-center bg-surface-2 ${t === "REEL" ? "aspect-[9/16]" : "aspect-square"}`}
+                    className={`flex items-center justify-center bg-surface-2 ${t === "REEL" || t === "STORY" ? "aspect-[9/16]" : "aspect-square"}`}
                   >
-                    {t === "CAROUSEL" ? (
+                    {t === "STORY" ? (
+                  <StoryEditor
+                    kind={storyKind}
+                    onKindChange={setStoryKind}
+                    value={mediaUrl}
+                    onChange={setMediaUrl}
+                  />
+                ) : t === "CAROUSEL" ? (
                       carouselUrls[0] ? (
                         <img src={carouselUrls[0]} alt="Prévia do carrossel" className="h-full w-full object-cover" />
                       ) : (
                         <Layers className="h-6 w-6 text-muted-foreground" />
+                      )
+                    ) : t === "STORY" ? (
+                      mediaUrl ? (
+                        storyKind === "video" ? (
+                          <video src={mediaUrl} className="h-full w-full object-cover" muted playsInline controls />
+                        ) : (
+                          <img src={mediaUrl} alt="Prévia do Story" className="h-full w-full object-cover" />
+                        )
+                      ) : (
+                        <CircleDot className="h-6 w-6 text-muted-foreground" />
                       )
                     ) : t === "REEL" ? (
                       coverUrl ? (
@@ -594,9 +624,9 @@ function Composer() {
                 </div>
 
                 <div className="mt-3 rounded-md border border-dashed border-border p-2.5 text-[11px] text-muted-foreground">
-                  <strong className="text-foreground">Stories:</strong> disponível apenas se o produto Meta, o
-                  tipo de conta e as permissões aprovadas do seu app suportarem. Caso contrário, o recurso
-                  aparece como indisponível em vez de ser contornado.
+                  <strong className="text-foreground">Stories:</strong> publicados pela API oficial com
+                  media_type=STORIES. Legenda, hashtags e menção clicável não existem em Stories pela API —
+                  a marcação de @usuário é apenas visual, gravada no arquivo antes do upload.
                 </div>
               </div>
             </div>
