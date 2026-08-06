@@ -428,7 +428,7 @@ function Composer() {
                   cover_url.
                 </p>
 
-                <div className="space-y-1.5">
+                <div className={`space-y-1.5 ${t === "STORY" ? "hidden" : ""}`}>
                   <Label className="text-xs">Legenda</Label>
                   <Textarea
                     rows={4}
@@ -440,7 +440,7 @@ function Composer() {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
+                  <div className={`space-y-1.5 ${t === "STORY" ? "hidden" : ""}`}>
                     <Label className="text-xs">Hashtags</Label>
                     <Input
                       value={hashtags}
