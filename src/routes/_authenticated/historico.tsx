@@ -55,6 +55,7 @@ function Historico() {
   const [status, setStatus] = useState("all");
   const [type, setType] = useState("all");
   const [term, setTerm] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const nameOf = (id: string | null) =>
     accounts.data?.find((a) => a.id === id)?.username ?? "—";
