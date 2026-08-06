@@ -580,14 +580,7 @@ function Composer() {
                   <div
                     className={`flex items-center justify-center bg-surface-2 ${t === "REEL" || t === "STORY" ? "aspect-[9/16]" : "aspect-square"}`}
                   >
-                    {t === "STORY" ? (
-                  <StoryEditor
-                    kind={storyKind}
-                    onKindChange={setStoryKind}
-                    value={mediaUrl}
-                    onChange={setMediaUrl}
-                  />
-                ) : t === "CAROUSEL" ? (
+                    {t === "CAROUSEL" ? (
                       carouselUrls[0] ? (
                         <img src={carouselUrls[0]} alt="Prévia do carrossel" className="h-full w-full object-cover" />
                       ) : (
