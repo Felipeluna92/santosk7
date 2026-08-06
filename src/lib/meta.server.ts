@@ -407,6 +407,18 @@ export async function publishPostById(postId: string) {
         // Guarda o container antes de esperar: se o tempo acabar, a próxima execução retoma daqui.
         await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
         await waitForContainer(containerId, token, env.graphVersion);
+      } else if (post.type === "STORY") {
+        // Story oficial: media_type=STORIES com image_url ou video_url.
+        // A API do Instagram Login não aceita user_tags nem legenda em Stories.
+        const isVideo = /\.(mp4|mov|m4v)(\?|$)/i.test(url);
+        containerId = await createContainer(igId, token, env.graphVersion, {
+          media_type: "STORIES",
+          ...(isVideo ? { video_url: url } : { image_url: url }),
+        });
+        if (isVideo) {
+          await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
+          await waitForContainer(containerId, token, env.graphVersion);
+        }
       } else {
         containerId = await createContainer(igId, token, env.graphVersion, {
           image_url: url,
