@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppShell, EmptyState } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -54,6 +55,7 @@ function Historico() {
   const [status, setStatus] = useState("all");
   const [type, setType] = useState("all");
   const [term, setTerm] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const nameOf = (id: string | null) =>
     accounts.data?.find((a) => a.id === id)?.username ?? "—";
@@ -86,6 +88,35 @@ function Historico() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteMany = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("posts").delete().in("id", ids);
+      if (error) throw new Error(error.message);
+      return ids.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`${n} post(s) removido(s).`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["posts"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteAll = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("posts")
+        .delete()
+        .not("id", "is", null);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Histórico apagado.");
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["posts"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const rows = (posts.data ?? []).filter(
     (p) =>
@@ -93,6 +124,19 @@ function Historico() {
       (type === "all" || p.type === type) &&
       (!term || (p.caption ?? "").toLowerCase().includes(term.toLowerCase())),
   );
+
+  const allSelected = rows.length > 0 && rows.every((p) => selected.has(p.id));
+
+  const toggleOne = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const toggleAll = () =>
+    setSelected(allSelected ? new Set() : new Set(rows.map((p) => p.id)));
 
   return (
     <AppShell title="Histórico" subtitle="Tudo que passou pela API oficial">
@@ -127,6 +171,32 @@ function Historico() {
             <SelectItem value="CAROUSEL">Carrossel</SelectItem>
           </SelectContent>
         </Select>
+
+        <div className="ml-auto flex gap-2">
+          {selected.size > 0 ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={deleteMany.isPending}
+              onClick={() => {
+                if (confirm(`Remover ${selected.size} post(s) selecionado(s)?`))
+                  deleteMany.mutate([...selected]);
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Apagar selecionados ({selected.size})
+            </Button>
+          ) : null}
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={deleteAll.isPending || (posts.data ?? []).length === 0}
+            onClick={() => {
+              if (confirm("Apagar TODO o histórico? Não dá pra desfazer.")) deleteAll.mutate();
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Apagar tudo
+          </Button>
+        </div>
       </div>
 
       {posts.isLoading ? (
@@ -142,7 +212,15 @@ function Historico() {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
+                <TableHead className="w-8">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleAll}
+                    aria-label="Selecionar todos"
+                  />
+                </TableHead>
                 <TableHead className="text-[11px] uppercase">Conta</TableHead>
+
                 <TableHead className="text-[11px] uppercase">Tipo</TableHead>
                 <TableHead className="text-[11px] uppercase">Data</TableHead>
                 <TableHead className="text-[11px] uppercase">Status</TableHead>
@@ -153,8 +231,16 @@ function Historico() {
             </TableHeader>
             <TableBody>
               {rows.map((p) => (
-                <TableRow key={p.id}>
+                <TableRow key={p.id} data-state={selected.has(p.id) ? "selected" : undefined}>
+                  <TableCell className="w-8">
+                    <Checkbox
+                      checked={selected.has(p.id)}
+                      onCheckedChange={() => toggleOne(p.id)}
+                      aria-label="Selecionar post"
+                    />
+                  </TableCell>
                   <TableCell className="text-xs">@{nameOf(p.account_id)}</TableCell>
+
                   <TableCell className="text-xs">{POST_TYPE_LABEL[p.type] ?? p.type}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {fmtDate(p.published_at ?? p.scheduled_at ?? p.created_at)}
