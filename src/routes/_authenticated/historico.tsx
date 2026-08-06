@@ -143,7 +143,15 @@ function Historico() {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
+                <TableHead className="w-8">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleAll}
+                    aria-label="Selecionar todos"
+                  />
+                </TableHead>
                 <TableHead className="text-[11px] uppercase">Conta</TableHead>
+
                 <TableHead className="text-[11px] uppercase">Tipo</TableHead>
                 <TableHead className="text-[11px] uppercase">Data</TableHead>
                 <TableHead className="text-[11px] uppercase">Status</TableHead>
