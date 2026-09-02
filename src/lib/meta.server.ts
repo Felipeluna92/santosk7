@@ -339,7 +339,7 @@ export async function publishPostById(postId: string, userId?: string) {
 
   /** Falhas de pré-checagem precisam marcar o post, senão ele trava a fila para sempre. */
   const abort = async (message: string) => {
-    await supabaseAdmin.from("posts").update({ status: "failed", error_message: message }).eq("id", postId);
+    await supabaseAdmin.from("posts").update({ status: "failed", error_message: message }).eq("id", postId).eq("user_id", ownerId);
     await writeLog(ownerId, "publish", "error", message, { postId });
     throw new Error(message);
   };
@@ -363,7 +363,7 @@ export async function publishPostById(postId: string, userId?: string) {
     await abort("Publicação só é permitida em contas Instagram Business ou Creator.");
   }
 
-  await supabaseAdmin.from("posts").update({ status: "publishing", error_message: null }).eq("id", postId);
+  await supabaseAdmin.from("posts").update({ status: "publishing", error_message: null }).eq("id", postId).eq("user_id", ownerId);
 
   try {
     const token = await tokenFor(accountId, ownerId);

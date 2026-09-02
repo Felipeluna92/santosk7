@@ -222,6 +222,7 @@ export async function syncInsights(userId: string, limitPerAccount = 50) {
             const { data: exists } = await supabaseAdmin
               .from("media_snapshots")
               .select("id")
+              .eq("user_id", userId)
               .eq("media_row_id", row.id)
               .eq("window_label", win.label)
               .maybeSingle();
@@ -261,7 +262,7 @@ export async function syncInsights(userId: string, limitPerAccount = 50) {
     finished_at: new Date().toISOString(),
   };
 
-  if (run?.id) await supabaseAdmin.from("sync_executions").update(summary).eq("id", run.id);
+  if (run?.id) await supabaseAdmin.from("sync_executions").update(summary).eq("id", run.id).eq("user_id", userId);
   await writeLog(
     userId,
     "insights",

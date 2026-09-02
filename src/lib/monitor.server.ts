@@ -77,7 +77,8 @@ export async function checkAccountsHealth(userId: string) {
       await supabaseAdmin
         .from("instagram_accounts")
         .update({ status: "restricted", last_sync_at: new Date().toISOString() })
-        .eq("id", acc.id);
+        .eq("id", acc.id)
+        .eq("user_id", userId);
 
       if (!openAlert) {
         await supabaseAdmin.from("account_alerts").insert({
@@ -99,13 +100,15 @@ export async function checkAccountsHealth(userId: string) {
       await supabaseAdmin
         .from("instagram_accounts")
         .update({ status: "connected", last_sync_at: new Date().toISOString() })
-        .eq("id", acc.id);
+        .eq("id", acc.id)
+        .eq("user_id", userId);
 
       if (openAlert) {
         await supabaseAdmin
           .from("account_alerts")
           .update({ resolved_at: new Date().toISOString() })
-          .eq("id", openAlert.id);
+          .eq("id", openAlert.id)
+          .eq("user_id", userId);
         await writeLog(userId, "monitor", "success", `@${acc.username} voltou ao normal.`, { accountId: acc.id });
         await sendPushToUser(userId, {
           title: `✅ @${acc.username} normalizada`,
