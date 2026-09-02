@@ -99,7 +99,7 @@ function AuthPage() {
           <Input
             type="password"
             required
-            minLength={8}
+            minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="bg-background"
