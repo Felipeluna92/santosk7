@@ -366,7 +366,7 @@ export async function publishPostById(postId: string, userId?: string) {
   await supabaseAdmin.from("posts").update({ status: "publishing", error_message: null }).eq("id", postId);
 
   try {
-    const token = await tokenFor(accountId, userId);
+    const token = await tokenFor(accountId, ownerId);
     const igId = account!.instagram_user_id;
 
     const caption = [post.caption ?? "", post.hashtags ?? ""].filter(Boolean).join("\n\n");
@@ -558,7 +558,7 @@ export async function fetchAccountsInsights(userId: string) {
 
   for (const acc of accounts ?? []) {
     try {
-      const token = await tokenFor(acc.id);
+      const token = await tokenFor(acc.id, userId);
       const me = await graph(
         `https://graph.instagram.com/${env.graphVersion}/me?fields=followers_count,media_count&access_token=${encodeURIComponent(token)}`,
       );
@@ -619,7 +619,7 @@ export async function fetchInsightsTimeseries(userId: string, days = 30) {
 
   for (const acc of accounts ?? []) {
     try {
-      const token = await tokenFor(acc.id);
+      const token = await tokenFor(acc.id, userId);
       const me = await graph(
         `https://graph.instagram.com/${env.graphVersion}/me?fields=followers_count&access_token=${encodeURIComponent(token)}`,
       );

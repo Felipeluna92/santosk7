@@ -38,12 +38,13 @@ async function graphGet(url: string, tries = 3): Promise<Record<string, unknown>
   throw new Error(lastError);
 }
 
-async function tokenFor(accountId: string) {
+async function tokenFor(accountId: string, userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("account_tokens")
     .select("access_token")
     .eq("account_id", accountId)
+    .eq("user_id", userId)
     .maybeSingle();
   return data?.access_token ?? null;
 }
@@ -88,19 +89,20 @@ async function mediaInsights(mediaId: string, token: string, version: string): P
 }
 
 /** Sincroniza mídias, insights e snapshots de todas as contas conectadas. */
-export async function syncInsights(limitPerAccount = 50) {
+export async function syncInsights(userId: string, limitPerAccount = 50) {
   const env = readMetaEnv();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   const { data: run } = await supabaseAdmin
     .from("sync_executions")
-    .insert({ kind: "insights", status: "running" })
+    .insert({ user_id: userId, kind: "insights", status: "running" })
     .select("id")
     .single();
 
   const { data: accounts } = await supabaseAdmin
     .from("instagram_accounts")
     .select("id, username")
+    .eq("user_id", userId)
     .eq("status", "connected");
 
   let mediaUpserted = 0;
@@ -109,7 +111,7 @@ export async function syncInsights(limitPerAccount = 50) {
   const messages: string[] = [];
 
   for (const acc of accounts ?? []) {
-    const token = await tokenFor(acc.id);
+    const token = await tokenFor(acc.id, userId);
     if (!token) {
       errors++;
       messages.push(`@${acc.username}: sem token salvo.`);
@@ -140,6 +142,7 @@ export async function syncInsights(limitPerAccount = 50) {
       }
       await supabaseAdmin.from("account_daily_metrics").upsert(
         {
+          user_id: userId,
           account_id: acc.id,
           day: new Date().toISOString().slice(0, 10),
           followers: (me["followers_count"] as number) ?? null,
@@ -182,6 +185,7 @@ export async function syncInsights(limitPerAccount = 50) {
           .from("ig_media")
           .upsert(
             {
+              user_id: userId,
               account_id: acc.id,
               ig_media_id: item.id,
               media_type: item.media_type ?? null,
@@ -223,6 +227,7 @@ export async function syncInsights(limitPerAccount = 50) {
               .maybeSingle();
             if (!exists) {
               await supabaseAdmin.from("media_snapshots").insert({
+                user_id: userId,
                 media_row_id: row.id,
                 window_label: win.label,
                 age_hours: Number(ageHours.toFixed(2)),
@@ -258,6 +263,7 @@ export async function syncInsights(limitPerAccount = 50) {
 
   if (run?.id) await supabaseAdmin.from("sync_executions").update(summary).eq("id", run.id);
   await writeLog(
+    userId,
     "insights",
     errors ? "warn" : "success",
     `Sincronização de insights: ${mediaUpserted} publicações, ${snapshotsWritten} snapshots, ${errors} erros.`,
