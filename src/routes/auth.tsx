@@ -60,7 +60,6 @@ function AuthPage() {
         toast.error("Não foi possível entrar.");
         return;
       }
-      await supabase.rpc("claim_app_ownership");
       navigate({ to: "/" });
 
     } catch (err) {

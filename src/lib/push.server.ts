@@ -21,14 +21,15 @@ export function vapidPublicKey(): string | null {
 }
 
 /** Sends a notification to every registered device. Removes dead subscriptions. */
-export async function sendPushToAll(payload: PushPayload) {
+export async function sendPushToUser(userId: string, payload: PushPayload) {
   const keys = vapid();
   if (!keys.publicKey || !keys.privateKey) return { sent: 0, failed: 0, reason: "vapid-missing" };
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: subs } = await supabaseAdmin
     .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth");
+    .select("id, endpoint, p256dh, auth")
+    .eq("user_id", userId);
 
   let sent = 0;
   let failed = 0;

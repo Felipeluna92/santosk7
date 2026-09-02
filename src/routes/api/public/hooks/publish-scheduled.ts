@@ -6,7 +6,16 @@ export const Route = createFileRoute("/api/public/hooks/publish-scheduled")({
       POST: async () => {
         const { publishPendingNow } = await import("@/lib/meta.server");
         try {
-          const result = await publishPendingNow();
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const { data } = await supabaseAdmin.from("instagram_accounts").select("user_id");
+          const users = [...new Set((data ?? []).map((row) => row.user_id))];
+          const results = await Promise.all(users.map((userId) => publishPendingNow(userId)));
+          const result = results.reduce((sum, row) => ({
+            ok: sum.ok + row.ok,
+            failed: sum.failed + row.failed,
+            skipped: sum.skipped + row.skipped,
+            total: sum.total + row.total,
+          }), { ok: 0, failed: 0, skipped: 0, total: 0 });
           return new Response(JSON.stringify({ success: true, ...result }), {
             headers: { "Content-Type": "application/json" },
           });

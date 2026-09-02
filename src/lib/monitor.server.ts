@@ -1,6 +1,6 @@
 // Server-only account health monitoring using the official Instagram Graph API.
 import { humanizeMetaError, readMetaEnv, writeLog } from "./meta.server";
-import { sendPushToAll } from "./push.server";
+import { sendPushToUser } from "./push.server";
 
 type CheckResult = {
   accountId: string;
@@ -20,13 +20,14 @@ function classify(message: string): { kind: string; label: string } {
   return { kind: "unreachable", label: "Conta indisponível" };
 }
 
-export async function checkAccountsHealth() {
+export async function checkAccountsHealth(userId: string) {
   const env = readMetaEnv();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   const { data: accounts } = await supabaseAdmin
     .from("instagram_accounts")
-    .select("id, username, status");
+    .select("id, username, status")
+    .eq("user_id", userId);
 
   const results: CheckResult[] = [];
 
@@ -35,6 +36,7 @@ export async function checkAccountsHealth() {
       .from("account_tokens")
       .select("access_token")
       .eq("account_id", acc.id)
+      .eq("user_id", userId)
       .maybeSingle();
 
     let ok = false;
@@ -66,6 +68,7 @@ export async function checkAccountsHealth() {
       .from("account_alerts")
       .select("id, kind")
       .eq("account_id", acc.id)
+      .eq("user_id", userId)
       .is("resolved_at", null)
       .maybeSingle();
 
@@ -74,17 +77,19 @@ export async function checkAccountsHealth() {
       await supabaseAdmin
         .from("instagram_accounts")
         .update({ status: "restricted", last_sync_at: new Date().toISOString() })
-        .eq("id", acc.id);
+        .eq("id", acc.id)
+        .eq("user_id", userId);
 
       if (!openAlert) {
         await supabaseAdmin.from("account_alerts").insert({
+          user_id: userId,
           account_id: acc.id,
           kind,
           severity: "error",
           message,
         });
-        await writeLog("monitor", "error", `@${acc.username}: ${message}`, { accountId: acc.id });
-        await sendPushToAll({
+        await writeLog(userId, "monitor", "error", `@${acc.username}: ${message}`, { accountId: acc.id });
+        await sendPushToUser(userId, {
           title: `⚠️ @${acc.username} — ${label}`,
           body: message,
           url: "/contas",
@@ -95,15 +100,17 @@ export async function checkAccountsHealth() {
       await supabaseAdmin
         .from("instagram_accounts")
         .update({ status: "connected", last_sync_at: new Date().toISOString() })
-        .eq("id", acc.id);
+        .eq("id", acc.id)
+        .eq("user_id", userId);
 
       if (openAlert) {
         await supabaseAdmin
           .from("account_alerts")
           .update({ resolved_at: new Date().toISOString() })
-          .eq("id", openAlert.id);
-        await writeLog("monitor", "success", `@${acc.username} voltou ao normal.`, { accountId: acc.id });
-        await sendPushToAll({
+          .eq("id", openAlert.id)
+          .eq("user_id", userId);
+        await writeLog(userId, "monitor", "success", `@${acc.username} voltou ao normal.`, { accountId: acc.id });
+        await sendPushToUser(userId, {
           title: `✅ @${acc.username} normalizada`,
           body: "A conta voltou a responder à API oficial da Meta.",
           url: "/contas",

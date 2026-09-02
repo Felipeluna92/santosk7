@@ -49,6 +49,7 @@ export const DEFAULT_SCOPES = [
 ];
 
 export async function writeLog(
+  userId: string,
   area: string,
   level: "info" | "warn" | "error" | "success",
   message: string,
@@ -57,6 +58,7 @@ export async function writeLog(
   try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("logs").insert({
+      user_id: userId,
       area,
       level,
       message: String(redact(message)),
@@ -102,7 +104,7 @@ export function buildAuthorizationUrl(env: MetaEnv, scopes: string[]) {
   return `https://www.instagram.com/oauth/authorize?${params.toString()}`;
 }
 
-export async function exchangeCodeForAccount(code: string) {
+export async function exchangeCodeForAccount(code: string, userId: string) {
   const env = readMetaEnv();
   if (!env.appId || !env.appSecret || !env.redirectUri) {
     throw new Error("Credenciais da Meta não configuradas no servidor.");
@@ -149,6 +151,7 @@ export async function exchangeCodeForAccount(code: string) {
     .from("instagram_accounts")
     .upsert(
       {
+        user_id: userId,
         instagram_user_id: igUserId,
         username: String(me["username"] ?? "conta"),
         display_name: (me["name"] as string) ?? null,
@@ -159,7 +162,7 @@ export async function exchangeCodeForAccount(code: string) {
         last_sync_at: new Date().toISOString(),
         status: "connected",
       },
-      { onConflict: "instagram_user_id" },
+      { onConflict: "user_id,instagram_user_id" },
     )
     .select("id, username")
     .single();
@@ -168,9 +171,9 @@ export async function exchangeCodeForAccount(code: string) {
 
   await supabaseAdmin
     .from("account_tokens")
-    .upsert({ account_id: account.id, access_token: token }, { onConflict: "account_id" });
+    .upsert({ account_id: account.id, access_token: token, user_id: userId }, { onConflict: "account_id" });
 
-  await writeLog("oauth", "success", `Conta @${account.username} conectada com sucesso.`, {
+  await writeLog(userId, "oauth", "success", `Conta @${account.username} conectada com sucesso.`, {
     account_id: account.id,
   });
 
@@ -178,7 +181,7 @@ export async function exchangeCodeForAccount(code: string) {
 }
 
 /** Manual connection: validates a user-supplied token against the official Graph API. */
-export async function connectWithAccessToken(rawToken: string) {
+export async function connectWithAccessToken(rawToken: string, userId: string) {
   const env = readMetaEnv();
   const input = rawToken.trim();
   if (input.length < 20) throw new Error("Token inválido. Cole o token de acesso completo.");
@@ -215,6 +218,7 @@ export async function connectWithAccessToken(rawToken: string) {
     .from("instagram_accounts")
     .upsert(
       {
+        user_id: userId,
         instagram_user_id: igUserId,
         username: String(me["username"] ?? "conta"),
         display_name: (me["name"] as string) ?? null,
@@ -225,7 +229,7 @@ export async function connectWithAccessToken(rawToken: string) {
         last_sync_at: new Date().toISOString(),
         status: "connected",
       },
-      { onConflict: "instagram_user_id" },
+      { onConflict: "user_id,instagram_user_id" },
     )
     .select("id, username")
     .single();
@@ -233,29 +237,30 @@ export async function connectWithAccessToken(rawToken: string) {
 
   await supabaseAdmin
     .from("account_tokens")
-    .upsert({ account_id: account.id, access_token: token }, { onConflict: "account_id" });
+    .upsert({ account_id: account.id, access_token: token, user_id: userId }, { onConflict: "account_id" });
 
-  await writeLog("token", "success", `Conta @${account.username} conectada por token manual.`, {
+  await writeLog(userId, "token", "success", `Conta @${account.username} conectada por token manual.`, {
     account_id: account.id,
   });
 
   return { id: account.id, username: account.username };
 }
 
-async function tokenFor(accountId: string) {
+async function tokenFor(accountId: string, userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("account_tokens")
     .select("access_token")
     .eq("account_id", accountId)
+    .eq("user_id", userId)
     .maybeSingle();
   if (!data?.access_token) throw new Error("Conta sem token válido. Reconecte a conta.");
   return data.access_token;
 }
 
-export async function syncAccountById(accountId: string) {
+export async function syncAccountById(accountId: string, userId: string) {
   const env = readMetaEnv();
-  const token = await tokenFor(accountId);
+  const token = await tokenFor(accountId, userId);
   const me = await graph(
     `https://graph.instagram.com/${env.graphVersion}/me?fields=user_id,username,name,profile_picture_url,account_type&access_token=${encodeURIComponent(
       token,
@@ -272,8 +277,9 @@ export async function syncAccountById(accountId: string) {
       last_sync_at: new Date().toISOString(),
       status: "connected",
     })
-    .eq("id", accountId);
-  await writeLog("sync", "info", `Conta sincronizada (@${me["username"]}).`, { accountId });
+    .eq("id", accountId)
+    .eq("user_id", userId);
+  await writeLog(userId, "sync", "info", `Conta sincronizada (@${me["username"]}).`, { accountId });
   return { ok: true };
 }
 
@@ -323,17 +329,18 @@ async function waitForContainer(containerId: string, token: string, version: str
 }
 
 
-export async function publishPostById(postId: string) {
+export async function publishPostById(postId: string, userId?: string) {
   const env = readMetaEnv();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  const { data: post } = await supabaseAdmin.from("posts").select("*").eq("id", postId).single();
+  const { data: post } = await supabaseAdmin.from("posts").select("*").eq("id", postId).match(userId ? { user_id: userId } : {}).single();
   if (!post) throw new Error("Post não encontrado.");
+  const ownerId = post.user_id;
 
   /** Falhas de pré-checagem precisam marcar o post, senão ele trava a fila para sempre. */
   const abort = async (message: string) => {
-    await supabaseAdmin.from("posts").update({ status: "failed", error_message: message }).eq("id", postId);
-    await writeLog("publish", "error", message, { postId });
+    await supabaseAdmin.from("posts").update({ status: "failed", error_message: message }).eq("id", postId).eq("user_id", ownerId);
+    await writeLog(ownerId, "publish", "error", message, { postId });
     throw new Error(message);
   };
 
@@ -344,6 +351,7 @@ export async function publishPostById(postId: string) {
     .from("instagram_accounts")
     .select("*")
     .eq("id", accountId)
+    .eq("user_id", ownerId)
     .maybeSingle();
   if (!account) await abort("Conta não encontrada ou removida do app.");
   if (!(account!.scopes ?? []).includes("instagram_business_content_publish")) {
@@ -355,10 +363,10 @@ export async function publishPostById(postId: string) {
     await abort("Publicação só é permitida em contas Instagram Business ou Creator.");
   }
 
-  await supabaseAdmin.from("posts").update({ status: "publishing", error_message: null }).eq("id", postId);
+  await supabaseAdmin.from("posts").update({ status: "publishing", error_message: null }).eq("id", postId).eq("user_id", ownerId);
 
   try {
-    const token = await tokenFor(accountId);
+    const token = await tokenFor(accountId, ownerId);
     const igId = account!.instagram_user_id;
 
     const caption = [post.caption ?? "", post.hashtags ?? ""].filter(Boolean).join("\n\n");
@@ -446,7 +454,7 @@ export async function publishPostById(postId: string) {
       })
       .eq("id", postId);
 
-    await writeLog("publish", "success", `Publicado com sucesso (${post.type}).`, {
+    await writeLog(ownerId, "publish", "success", `Publicado com sucesso (${post.type}).`, {
       postId,
       mediaId,
       containerId,
@@ -463,20 +471,22 @@ export async function publishPostById(postId: string) {
         error_message: retriable ? null : message,
       })
       .eq("id", postId);
-    await writeLog("publish", retriable ? "warn" : "error", message, { postId });
+    await writeLog(ownerId, "publish", retriable ? "warn" : "error", message, { postId });
     throw new Error(message);
   }
 }
 
-export async function publishPendingNow() {
+export async function publishPendingNow(userId?: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   // Recupera posts travados em "publicando" (execução interrompida por timeout).
+  const ownerFilter = userId ? { user_id: userId } : {};
   const staleCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
   await supabaseAdmin
     .from("posts")
     .update({ status: "scheduled" })
     .eq("status", "publishing")
+    .match(ownerFilter)
     .lt("updated_at", staleCutoff);
 
   // Posts sem conta (conta removida) nunca podem ser publicados: marca como falha
@@ -488,12 +498,14 @@ export async function publishPendingNow() {
       error_message: "A conta desta publicação foi removida do app.",
     })
     .eq("status", "scheduled")
+    .match(ownerFilter)
     .is("account_id", null);
 
   const { data: pending } = await supabaseAdmin
     .from("posts")
     .select("id")
     .eq("status", "scheduled")
+    .match(ownerFilter)
     .not("account_id", "is", null)
     .lte("scheduled_at", new Date().toISOString())
     .order("scheduled_at", { ascending: true })
@@ -511,13 +523,14 @@ export async function publishPendingNow() {
       continue;
     }
     try {
-      await publishPostById(p.id);
+      await publishPostById(p.id, userId);
       ok++;
     } catch {
       failed++;
     }
   }
-  await writeLog(
+  if (userId) await writeLog(
+    userId,
     "scheduler",
     "info",
     `Publicação de pendentes executada: ${ok} ok, ${failed} falhas, ${skipped} adiados.`,
@@ -525,12 +538,13 @@ export async function publishPendingNow() {
   return { ok, failed, skipped, total: (pending ?? []).length };
 }
 
-export async function fetchAccountsInsights() {
+export async function fetchAccountsInsights(userId: string) {
   const env = readMetaEnv();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: accounts } = await supabaseAdmin
     .from("instagram_accounts")
     .select("id, username")
+    .eq("user_id", userId)
     .eq("status", "connected");
 
   const results: {
@@ -544,7 +558,7 @@ export async function fetchAccountsInsights() {
 
   for (const acc of accounts ?? []) {
     try {
-      const token = await tokenFor(acc.id);
+      const token = await tokenFor(acc.id, userId);
       const me = await graph(
         `https://graph.instagram.com/${env.graphVersion}/me?fields=followers_count,media_count&access_token=${encodeURIComponent(token)}`,
       );
@@ -586,12 +600,13 @@ export async function fetchAccountsInsights() {
   return results;
 }
 
-export async function fetchInsightsTimeseries(days = 30) {
+export async function fetchInsightsTimeseries(userId: string, days = 30) {
   const env = readMetaEnv();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: accounts } = await supabaseAdmin
     .from("instagram_accounts")
     .select("id, username")
+    .eq("user_id", userId)
     .eq("status", "connected");
 
   const now = Math.floor(Date.now() / 1000);
@@ -604,7 +619,7 @@ export async function fetchInsightsTimeseries(days = 30) {
 
   for (const acc of accounts ?? []) {
     try {
-      const token = await tokenFor(acc.id);
+      const token = await tokenFor(acc.id, userId);
       const me = await graph(
         `https://graph.instagram.com/${env.graphVersion}/me?fields=followers_count&access_token=${encodeURIComponent(token)}`,
       );

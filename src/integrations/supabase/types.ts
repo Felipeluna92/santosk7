@@ -23,6 +23,7 @@ export type Database = {
           message: string
           resolved_at: string | null
           severity: string
+          user_id: string
         }
         Insert: {
           account_id?: string | null
@@ -32,6 +33,7 @@ export type Database = {
           message: string
           resolved_at?: string | null
           severity?: string
+          user_id: string
         }
         Update: {
           account_id?: string | null
@@ -41,6 +43,7 @@ export type Database = {
           message?: string
           resolved_at?: string | null
           severity?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -62,6 +65,7 @@ export type Database = {
           profile_views: number | null
           reach: number | null
           unavailable_metrics: string[]
+          user_id: string
           views: number | null
         }
         Insert: {
@@ -73,6 +77,7 @@ export type Database = {
           profile_views?: number | null
           reach?: number | null
           unavailable_metrics?: string[]
+          user_id: string
           views?: number | null
         }
         Update: {
@@ -84,6 +89,7 @@ export type Database = {
           profile_views?: number | null
           reach?: number | null
           unavailable_metrics?: string[]
+          user_id?: string
           views?: number | null
         }
         Relationships: [
@@ -102,18 +108,21 @@ export type Database = {
           account_id: string
           created_at: string
           updated_at: string
+          user_id: string
         }
         Insert: {
           access_token: string
           account_id: string
           created_at?: string
           updated_at?: string
+          user_id: string
         }
         Update: {
           access_token?: string
           account_id?: string
           created_at?: string
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -166,6 +175,7 @@ export type Database = {
           total_interactions: number | null
           unavailable_metrics: string[]
           updated_at: string
+          user_id: string
           views: number | null
         }
         Insert: {
@@ -193,6 +203,7 @@ export type Database = {
           total_interactions?: number | null
           unavailable_metrics?: string[]
           updated_at?: string
+          user_id: string
           views?: number | null
         }
         Update: {
@@ -220,6 +231,7 @@ export type Database = {
           total_interactions?: number | null
           unavailable_metrics?: string[]
           updated_at?: string
+          user_id?: string
           views?: number | null
         }
         Relationships: [
@@ -245,6 +257,7 @@ export type Database = {
           status: string
           token_expires_at: string | null
           updated_at: string
+          user_id: string
           username: string
         }
         Insert: {
@@ -259,6 +272,7 @@ export type Database = {
           status?: string
           token_expires_at?: string | null
           updated_at?: string
+          user_id?: string
           username: string
         }
         Update: {
@@ -273,6 +287,7 @@ export type Database = {
           status?: string
           token_expires_at?: string | null
           updated_at?: string
+          user_id?: string
           username?: string
         }
         Relationships: []
@@ -285,6 +300,7 @@ export type Database = {
           level: string
           message: string
           metadata: Json
+          user_id: string
         }
         Insert: {
           area: string
@@ -293,6 +309,7 @@ export type Database = {
           level?: string
           message: string
           metadata?: Json
+          user_id?: string
         }
         Update: {
           area?: string
@@ -301,6 +318,7 @@ export type Database = {
           level?: string
           message?: string
           metadata?: Json
+          user_id?: string
         }
         Relationships: []
       }
@@ -314,6 +332,7 @@ export type Database = {
           tags: string[]
           thumbnail_url: string | null
           title: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -324,6 +343,7 @@ export type Database = {
           tags?: string[]
           thumbnail_url?: string | null
           title: string
+          user_id?: string
         }
         Update: {
           created_at?: string
@@ -334,6 +354,7 @@ export type Database = {
           tags?: string[]
           thumbnail_url?: string | null
           title?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -350,6 +371,7 @@ export type Database = {
           shares: number | null
           total_interactions: number | null
           unavailable_metrics: string[]
+          user_id: string
           views: number | null
           window_label: string
         }
@@ -365,6 +387,7 @@ export type Database = {
           shares?: number | null
           total_interactions?: number | null
           unavailable_metrics?: string[]
+          user_id: string
           views?: number | null
           window_label: string
         }
@@ -380,6 +403,7 @@ export type Database = {
           shares?: number | null
           total_interactions?: number | null
           unavailable_metrics?: string[]
+          user_id?: string
           views?: number | null
           window_label?: string
         }
@@ -411,6 +435,7 @@ export type Database = {
           status: string
           type: string
           updated_at: string
+          user_id: string
         }
         Insert: {
           account_id?: string | null
@@ -429,6 +454,7 @@ export type Database = {
           status?: string
           type?: string
           updated_at?: string
+          user_id?: string
         }
         Update: {
           account_id?: string | null
@@ -447,6 +473,7 @@ export type Database = {
           status?: string
           type?: string
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -496,6 +523,7 @@ export type Database = {
           id: string
           label: string | null
           p256dh: string
+          user_id: string
         }
         Insert: {
           auth: string
@@ -504,6 +532,7 @@ export type Database = {
           id?: string
           label?: string | null
           p256dh: string
+          user_id?: string
         }
         Update: {
           auth?: string
@@ -512,6 +541,7 @@ export type Database = {
           id?: string
           label?: string | null
           p256dh?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -525,6 +555,7 @@ export type Database = {
           setup_completed: boolean
           timezone: string
           updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -535,6 +566,7 @@ export type Database = {
           setup_completed?: boolean
           timezone?: string
           updated_at?: string
+          user_id?: string
         }
         Update: {
           created_at?: string
@@ -545,6 +577,7 @@ export type Database = {
           setup_completed?: boolean
           timezone?: string
           updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -560,6 +593,7 @@ export type Database = {
           snapshots_written: number
           started_at: string
           status: string
+          user_id: string
         }
         Insert: {
           accounts_processed?: number
@@ -572,6 +606,7 @@ export type Database = {
           snapshots_written?: number
           started_at?: string
           status?: string
+          user_id: string
         }
         Update: {
           accounts_processed?: number
@@ -584,6 +619,7 @@ export type Database = {
           snapshots_written?: number
           started_at?: string
           status?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -592,8 +628,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      claim_app_ownership: { Args: never; Returns: boolean }
-      is_app_owner: { Args: { _user_id: string }; Returns: boolean }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
