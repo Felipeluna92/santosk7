@@ -40,7 +40,9 @@ export async function uploadLocalFile(file: File, kind: "image" | "video") {
   const error = validateFile(file, kind);
   if (error) throw new Error(error);
 
-  const path = `${new Date().toISOString().slice(0, 10)}/${safeName(file.name)}`;
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) throw new Error("Entre novamente para enviar arquivos.");
+  const path = `${authData.user.id}/${new Date().toISOString().slice(0, 10)}/${safeName(file.name)}`;
   const { error: upErr } = await supabase.storage.from("media").upload(path, file, {
     contentType: file.type,
     cacheControl: "31536000",

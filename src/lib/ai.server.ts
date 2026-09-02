@@ -22,11 +22,12 @@ export type AccountIntelligence = Awaited<ReturnType<typeof buildAccountIntellig
 const MEDIA_COLUMNS =
   "id, account_id, format, caption, hashtags, permalink, thumbnail_url, duration_seconds, published_at, views, reach, likes, comments, shares, saved, total_interactions, unavailable_metrics";
 
-async function loadMedia(accountId: string | null) {
+async function loadMedia(userId: string, accountId: string | null) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   let query = supabaseAdmin
     .from("ig_media")
     .select(MEDIA_COLUMNS)
+    .eq("user_id", userId)
     .not("published_at", "is", null)
     .order("published_at", { ascending: false })
     .limit(500);
@@ -40,9 +41,9 @@ function ratio(a: number | null | undefined, b: number | null | undefined) {
   return a / b;
 }
 
-export async function buildAccountIntelligence(accountId: string | null) {
+export async function buildAccountIntelligence(userId: string, accountId: string | null) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const rows = await loadMedia(accountId);
+  const rows = await loadMedia(userId, accountId);
   const { scored, baseline } = scoreMedia(rows);
   const analyzed = scored.filter((s) => s.perf !== null);
 
@@ -55,6 +56,7 @@ export async function buildAccountIntelligence(accountId: string | null) {
   const { data: daily } = await supabaseAdmin
     .from("account_daily_metrics")
     .select("day, followers, views, reach, account_id")
+    .eq("user_id", userId)
     .order("day", { ascending: false })
     .limit(120);
   const dailyRows = (daily ?? []).filter((d) => !accountId || d.account_id === accountId);
@@ -123,13 +125,13 @@ export async function buildAccountIntelligence(accountId: string | null) {
 }
 
 /** Previsão por vizinhos comparáveis do próprio histórico. Nunca um número único. */
-export async function predictPerformance(input: {
+export async function predictPerformance(userId: string, input: {
   accountId: string;
   format: string;
   dow: number;
   hour: number;
 }) {
-  const rows = await loadMedia(input.accountId);
+  const rows = await loadMedia(userId, input.accountId);
   const { scored } = scoreMedia(rows);
   const sameFormat = scored.filter((s) => s.format === input.format && typeof s.views === "number");
   const nearSlot = sameFormat.filter(
@@ -157,11 +159,11 @@ Regras invioláveis:
 - Índice de desempenho 1,00 = igual à mediana histórica da conta.
 - Métrica ausente significa indisponível na API, jamais zero.`;
 
-export async function askIntelligence(question: string, accountId: string | null) {
+export async function askIntelligence(userId: string, question: string, accountId: string | null) {
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) return { answer: "A IA não está configurada neste projeto.", context: null };
 
-  const data = await buildAccountIntelligence(accountId);
+  const data = await buildAccountIntelligence(userId, accountId);
   const compact = {
     publicacoesAnalisadas: data.postsAnalyzed,
     maturidade: data.maturity,
