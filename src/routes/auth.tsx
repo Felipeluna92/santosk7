@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Lock } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import logoAsset from "@/assets/sk7-logo.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -70,14 +71,23 @@ function AuthPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4">
-      <form onSubmit={submit} className="panel w-full max-w-sm space-y-4 p-6">
-        <div className="space-y-1">
-          <div className="brand-gradient-bg flex h-9 w-9 items-center justify-center rounded-lg">
-            <Lock className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <h1 className="pt-2 text-lg font-semibold">Acesso restrito</h1>
-          <p className="text-xs text-muted-foreground">
+    <main className="grid min-h-screen bg-background lg:grid-cols-[1fr_440px]">
+      <section className="relative hidden overflow-hidden border-r border-border bg-sidebar lg:flex lg:flex-col lg:justify-between lg:p-12">
+        <img src={logoAsset.url} alt="SK7" className="h-14 w-14 rounded-md object-cover" />
+        <div className="max-w-xl">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Studio operations</p>
+          <h2 className="mt-4 font-display text-4xl font-semibold leading-tight text-foreground">Conteúdo, agenda e performance em um único cockpit.</h2>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">Uma operação privada construída para publicar com precisão e acompanhar o que importa.</p>
+        </div>
+        <p className="text-[10px] uppercase tracking-widest text-muted-foreground">SK7 Studio · Private workspace</p>
+      </section>
+      <section className="flex items-center justify-center px-5 py-10 lg:px-10">
+      <form onSubmit={submit} className="w-full max-w-sm space-y-6">
+        <div className="space-y-2">
+          <img src={logoAsset.url} alt="SK7" className="mb-8 h-12 w-12 rounded-md object-cover lg:hidden" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Acesso privado</p>
+          <h1 className="pt-1 text-2xl font-semibold">Bem-vindo de volta</h1>
+          <p className="text-sm text-muted-foreground">
             Este painel é pessoal. Entre com sua conta para gerenciar suas contas do Instagram.
           </p>
         </div>
@@ -89,7 +99,7 @@ function AuthPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="bg-background"
+            className="bg-surface"
             autoComplete="username"
           />
         </div>
@@ -102,19 +112,19 @@ function AuthPage() {
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="bg-background"
+            className="bg-surface"
             autoComplete="current-password"
           />
         </div>
 
         <Button type="submit" className="w-full" disabled={busy}>
-          Entrar
+          Entrar <ArrowRight className="h-4 w-4" />
         </Button>
         <p className="text-center text-[11px] text-muted-foreground">
           Painel privado. Não há criação de contas — apenas o acesso do proprietário funciona.
         </p>
       </form>
-
+      </section>
     </main>
   );
 }
