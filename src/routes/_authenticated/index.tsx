@@ -116,6 +116,10 @@ function Dashboard() {
           </Button>
         </div>
       </section>
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:hidden">
+        <Button asChild size="sm"><Link to="/composer"><Sparkles className="h-4 w-4" /> Nova publicação</Link></Button>
+        <Button asChild size="sm" variant="secondary"><Link to="/calendario">Ver agenda</Link></Button>
+      </div>
 
       {loading ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

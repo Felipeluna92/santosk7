@@ -8,7 +8,6 @@ import {
   History,
   ScrollText,
   Settings2,
-  Instagram,
   Menu,
   LogOut,
   BrainCircuit,

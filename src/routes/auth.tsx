@@ -82,48 +82,31 @@ function AuthPage() {
         <p className="text-[10px] uppercase tracking-widest text-muted-foreground">SK7 Studio · Private workspace</p>
       </section>
       <section className="flex items-center justify-center px-5 py-10 lg:px-10">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-6">
-        <div className="space-y-2">
-          <img src={logoAsset.url} alt="SK7" className="mb-8 h-12 w-12 rounded-md object-cover lg:hidden" />
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Acesso privado</p>
-          <h1 className="pt-1 text-2xl font-semibold">Bem-vindo de volta</h1>
-          <p className="text-sm text-muted-foreground">
-            Este painel é pessoal. Entre com sua conta para gerenciar suas contas do Instagram.
+        <form onSubmit={submit} className="w-full max-w-sm space-y-6">
+          <div className="space-y-2">
+            <img src={logoAsset.url} alt="SK7" className="mb-8 h-12 w-12 rounded-md object-cover lg:hidden" />
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Acesso privado</p>
+            <h1 className="pt-1 text-2xl font-semibold">Bem-vindo de volta</h1>
+            <p className="text-sm text-muted-foreground">
+              Este painel é pessoal. Entre com sua conta para gerenciar suas contas do Instagram.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Usuário ou e-mail</Label>
+            <Input type="text" required value={email} onChange={(e) => setEmail(e.target.value)} className="bg-surface" autoComplete="username" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Senha</Label>
+            <Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="bg-surface" autoComplete="current-password" />
+          </div>
+
+          <Button type="submit" className="w-full" disabled={busy}>Entrar <ArrowRight className="h-4 w-4" /></Button>
+          <p className="text-center text-[11px] text-muted-foreground">
+            Painel privado. Não há criação de contas — apenas o acesso do proprietário funciona.
           </p>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-xs">Usuário ou e-mail</Label>
-          <Input
-            type="text"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="bg-surface"
-            autoComplete="username"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-xs">Senha</Label>
-          <Input
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="bg-surface"
-            autoComplete="current-password"
-          />
-        </div>
-
-        <Button type="submit" className="w-full" disabled={busy}>
-          Entrar <ArrowRight className="h-4 w-4" />
-        </Button>
-        <p className="text-center text-[11px] text-muted-foreground">
-          Painel privado. Não há criação de contas — apenas o acesso do proprietário funciona.
-        </p>
-      </form>
+        </form>
       </section>
     </main>
   );

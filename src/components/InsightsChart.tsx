@@ -26,7 +26,7 @@ export function InsightsChart() {
   const available = Boolean(q.data?.available) && points.length > 1;
 
   return (
-    <section className="panel mt-3 p-5">
+    <section className="panel mt-4 p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold">Evolução</h3>
@@ -82,7 +82,7 @@ export function InsightsChart() {
                 contentStyle={{
                   background: "var(--popover)",
                   border: "1px solid var(--border)",
-                  borderRadius: 12,
+                   borderRadius: 8,
                   fontSize: 12,
                   color: "var(--popover-foreground)",
                 }}
