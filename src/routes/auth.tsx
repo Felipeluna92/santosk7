@@ -10,7 +10,15 @@ import { supabase } from "@/integrations/supabase/client";
 import logoAsset from "@/assets/sk7-logo.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Acesso — Studio Solo" }] }),
+  ssr: false,
+  head: () => ({ meta: [
+    { title: "Acesso — SK7 Studio" },
+    { name: "description", content: "Acesse o Command Center privado da SK7 Studio." },
+    { property: "og:title", content: "Acesso — SK7 Studio" },
+    { property: "og:description", content: "Acesse o Command Center privado da SK7 Studio." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+  ] }),
   component: AuthPage,
 });
 
@@ -40,24 +48,24 @@ function AuthPage() {
   };
 
   return (
-    <main className="grid min-h-screen bg-background lg:grid-cols-[1fr_480px]">
-      <div className="relative hidden flex-col justify-between overflow-hidden bg-sidebar p-12 lg:flex">
-        <div className="absolute inset-0 bg-primary/5 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]" />
+    <main className="grid min-h-screen bg-background lg:grid-cols-[minmax(0,1fr)_460px]">
+      <div className="relative hidden flex-col justify-between overflow-hidden border-r border-border bg-foreground p-12 text-primary-foreground lg:flex">
+        <div className="absolute inset-0 bg-primary/15 [mask-image:linear-gradient(to_bottom_right,black,transparent_72%)]" />
         <div className="relative z-10 flex items-center gap-3">
           <img src={logoAsset.url} className="h-10 w-10 rounded-xl" />
           <span className="font-display text-lg font-bold tracking-tight">SK7 Studio</span>
         </div>
         <div className="relative z-10 max-w-md space-y-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Workspace Solo</p>
-          <h2 className="font-display text-5xl font-bold leading-tight tracking-tighter">Cockpit de Operações para Criadores.</h2>
-          <p className="text-sm text-muted-foreground leading-relaxed">Uma suíte privada de ferramentas para automatizar, analisar e escalar sua presença no Instagram.</p>
+          <h2 className="font-display text-5xl font-bold leading-tight">Decisões melhores para cada publicação.</h2>
+          <p className="text-sm leading-relaxed text-primary-foreground/65">Conteúdo, agenda, performance e saúde das contas reunidos em um único Command Center.</p>
         </div>
         <div className="relative z-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
           Versão 2.0 · Private Instance
         </div>
       </div>
       <div className="flex items-center justify-center p-6">
-        <form onSubmit={submit} className="w-full max-w-sm space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <form onSubmit={submit} className="w-full max-w-sm space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tighter">Bem-vindo</h1>
             <p className="text-sm text-muted-foreground">Identifique-se para acessar o workspace.</p>
@@ -65,11 +73,11 @@ function AuthPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Usuário</Label>
-              <Input required value={email} onChange={e => setEmail(e.target.value)} className="h-12 bg-muted/30 border-border/50 rounded-xl" />
+              <Input required value={email} onChange={e => setEmail(e.target.value)} className="h-12" autoComplete="username" />
             </div>
             <div className="space-y-2">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Senha</Label>
-              <Input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="h-12 bg-muted/30 border-border/50 rounded-xl" />
+              <Input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="h-12" autoComplete="current-password" />
             </div>
           </div>
           <Button type="submit" disabled={busy} className="h-12 w-full rounded-xl font-bold text-md shadow-xl">
