@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { AtSign, Clock, Sparkles, ArrowUpRight, Eye, Users, CheckCircle2 } from "lucide-react";
+import { AtSign, Clock, Sparkles, ArrowUpRight, Eye, Users, CheckCircle2, Activity } from "lucide-react";
 
 import { AppShell, DemoBanner } from "@/components/AppShell";
 import { InsightsChart } from "@/components/InsightsChart";
@@ -101,24 +101,19 @@ function Dashboard() {
 
       <section className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 border-b border-border pb-6">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Visão geral</p>
-          <h2 className="mt-2 font-display text-2xl font-semibold sm:text-3xl">Performance da operação</h2>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Command Center</p>
+          <h2 className="mt-2 font-display text-2xl font-semibold sm:text-3xl">Tudo que precisa da sua atenção.</h2>
           <p className="mt-2 text-xs text-muted-foreground">{accountList.length} conta(s) em um único fluxo · atualizado {fmtDate(lastSync)}</p>
         </div>
         <div className="hidden shrink-0 items-center gap-2 sm:flex">
-          <Button asChild size="sm">
-            <Link to="/composer">
-              <Sparkles className="h-4 w-4" /> Nova publicação
-            </Link>
-          </Button>
           <Button asChild size="sm" variant="secondary">
-            <Link to="/calendario">Ver agenda</Link>
+            <Link to="/saude"><Activity className="h-4 w-4" /> Ver saúde</Link>
           </Button>
         </div>
       </section>
       <div className="mb-4 grid grid-cols-2 gap-2 sm:hidden">
-        <Button asChild size="sm"><Link to="/composer"><Sparkles className="h-4 w-4" /> Nova publicação</Link></Button>
-        <Button asChild size="sm" variant="secondary"><Link to="/calendario">Ver agenda</Link></Button>
+        <Button asChild size="sm"><Link to="/saude"><Activity className="h-4 w-4" /> Saúde</Link></Button>
+        <Button asChild size="sm" variant="secondary"><Link to="/calendario">Agenda</Link></Button>
       </div>
 
       {loading ? (

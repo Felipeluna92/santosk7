@@ -197,6 +197,113 @@ export function weeklyFrequency(scored: Scored[], now = Date.now()): number | nu
   return Number((recent.length / 4).toFixed(1));
 }
 
+export type GrowthHealthInput = {
+  postsAnalyzed: number;
+  postsCollected: number;
+  trend: Trend;
+  weeklyFrequency: number | null;
+  followers: number | null;
+  medianViews: number | null;
+  engagementPerReach: number | null;
+  savesPerReach: number | null;
+  sharesPerReach: number | null;
+  viewsPerFollower: number | null;
+  bestFormatScore: number | null;
+  bestSlotScore: number | null;
+};
+
+export type GrowthHealthDimension = {
+  key: "traction" | "engagement" | "consistency" | "discovery" | "optimization";
+  label: string;
+  score: number | null;
+  weight: number;
+  summary: string;
+};
+
+const clampScore = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
+const scaled = (value: number | null, ceiling: number) =>
+  value === null ? null : clampScore((Math.max(0, value) / ceiling) * 100);
+
+export function buildGrowthHealth(input: GrowthHealthInput) {
+  const traction = input.trend.changePct === null
+    ? null
+    : clampScore(50 + Math.max(-50, Math.min(50, input.trend.changePct)));
+
+  const engagementParts = [
+    scaled(input.engagementPerReach, 0.08),
+    scaled(input.savesPerReach, 0.02),
+    scaled(input.sharesPerReach, 0.02),
+  ].filter((value): value is number => value !== null);
+  const engagement = engagementParts.length
+    ? clampScore(engagementParts.reduce((sum, value) => sum + value, 0) / engagementParts.length)
+    : null;
+
+  const consistency = input.weeklyFrequency === null
+    ? null
+    : input.weeklyFrequency < 1
+      ? clampScore(input.weeklyFrequency * 40)
+      : input.weeklyFrequency <= 3
+        ? clampScore(40 + ((input.weeklyFrequency - 1) / 2) * 50)
+        : input.weeklyFrequency <= 7
+          ? 100
+          : clampScore(100 - Math.min(25, (input.weeklyFrequency - 7) * 4));
+
+  const discoveryParts = [
+    scaled(input.viewsPerFollower, 1.5),
+    input.medianViews !== null && input.followers !== null && input.followers > 0
+      ? scaled(input.medianViews / input.followers, 1.5)
+      : null,
+  ].filter((value): value is number => value !== null);
+  const discovery = discoveryParts.length
+    ? clampScore(discoveryParts.reduce((sum, value) => sum + value, 0) / discoveryParts.length)
+    : null;
+
+  const optimizationParts = [input.bestFormatScore, input.bestSlotScore]
+    .filter((value): value is number => value !== null)
+    .map((value) => clampScore((value / 1.35) * 100));
+  const optimization = optimizationParts.length
+    ? clampScore(optimizationParts.reduce((sum, value) => sum + value, 0) / optimizationParts.length)
+    : null;
+
+  const dimensions: GrowthHealthDimension[] = [
+    { key: "traction", label: "Tração", score: traction, weight: 25, summary: traction === null ? "Colete ao menos 28 dias para medir evolução." : traction >= 70 ? "O alcance recente está ganhando força." : traction >= 45 ? "O desempenho está estável, com espaço para acelerar." : "A performance recente perdeu força." },
+    { key: "engagement", label: "Engajamento qualificado", score: engagement, weight: 25, summary: engagement === null ? "Alcance e interações ainda não estão disponíveis." : engagement >= 70 ? "O conteúdo gera sinais fortes de valor e compartilhamento." : engagement >= 45 ? "As pessoas interagem, mas poucos conteúdos viram referência." : "Salvamentos e compartilhamentos precisam crescer." },
+    { key: "consistency", label: "Consistência", score: consistency, weight: 15, summary: consistency === null ? "Ainda não há quatro semanas de atividade mensurável." : consistency >= 75 ? "A cadência atual sustenta aprendizado e distribuição." : "A frequência atual limita o aprendizado da conta." },
+    { key: "discovery", label: "Descoberta", score: discovery, weight: 20, summary: discovery === null ? "Seguidores e visualizações são necessários para este diagnóstico." : discovery >= 70 ? "O conteúdo alcança além da base atual." : discovery >= 45 ? "A descoberta existe, mas ainda é irregular." : "Poucas visualizações chegam fora da base atual." },
+    { key: "optimization", label: "Formato e horário", score: optimization, weight: 15, summary: optimization === null ? "Publique mais para identificar padrões confiáveis." : optimization >= 70 ? "A conta já possui formatos e janelas com vantagem clara." : "Ainda há espaço para concentrar esforços no que performa melhor." },
+  ];
+
+  const available = dimensions.filter((dimension) => dimension.score !== null);
+  const weightTotal = available.reduce((sum, dimension) => sum + dimension.weight, 0);
+  const score = weightTotal
+    ? clampScore(available.reduce((sum, dimension) => sum + (dimension.score as number) * dimension.weight, 0) / weightTotal)
+    : 0;
+  const completeness = clampScore((available.length / dimensions.length) * 70 + Math.min(30, input.postsAnalyzed));
+  const confidence = completeness >= 85 ? "alta" : completeness >= 60 ? "moderada" : completeness >= 35 ? "baixa" : "inicial";
+
+  const strongest = available.slice().sort((a, b) => (b.score as number) - (a.score as number))[0];
+  const weakest = available.slice().sort((a, b) => (a.score as number) - (b.score as number))[0];
+  const recommendations: string[] = [];
+  if (consistency !== null && consistency < 70) recommendations.push("Estabeleça uma cadência sustentável de 3 a 5 publicações por semana durante 30 dias.");
+  if (engagement !== null && engagement < 70) recommendations.push("Crie conteúdos utilitários e compartilháveis, com promessa clara nos primeiros segundos e CTA específico para salvar ou enviar.");
+  if (discovery !== null && discovery < 70) recommendations.push("Priorize Reels derivados dos temas que já superaram a mediana da conta e teste novas aberturas sobre o mesmo assunto.");
+  if (traction !== null && traction < 50) recommendations.push("Recupere os temas dos melhores conteúdos e publique uma nova variação antes de ampliar o volume.");
+  if (optimization !== null && optimization < 70) recommendations.push("Concentre os próximos testes nos dois formatos e horários mais fortes do histórico, alterando apenas uma variável por vez.");
+  if (!recommendations.length) recommendations.push("Mantenha a cadência e transforme os melhores conteúdos em séries para ampliar a repetibilidade do resultado.");
+  if (input.postsAnalyzed < 15) recommendations.push(`Colete mais ${15 - input.postsAnalyzed} publicação(ões) para elevar a confiança do diagnóstico.`);
+
+  return {
+    score,
+    label: score >= 80 ? "Potencial forte" : score >= 65 ? "Boa base" : score >= 45 ? "Em desenvolvimento" : "Base frágil",
+    confidence,
+    completeness,
+    dimensions,
+    strongest: strongest?.label ?? null,
+    weakest: weakest?.label ?? null,
+    recommendations: recommendations.slice(0, 4),
+  };
+}
+
 export function bestSlots(cells: HeatCell[], limit = 3) {
   return cells
     .filter((c) => c.samples >= MIN_SAMPLE && c.score !== null)
