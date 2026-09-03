@@ -2,6 +2,7 @@
 // O backend calcula tudo; o modelo de linguagem apenas explica os números já calculados.
 import {
   buildHeatmap,
+  buildGrowthHealth,
   bestSlots,
   DOW_LABELS,
   durationBucket,
@@ -122,6 +123,41 @@ export async function buildAccountIntelligence(userId: string, accountId: string
     })),
     unavailableMetrics: unavailable,
   };
+}
+
+export async function buildGrowthHealthReport(userId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: accounts, error } = await supabaseAdmin
+    .from("instagram_accounts")
+    .select("id, username, display_name, profile_picture_url, last_sync_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error("Não foi possível carregar as contas para o diagnóstico.");
+
+  return Promise.all((accounts ?? []).map(async (account) => {
+    const intelligence = await buildAccountIntelligence(userId, account.id);
+    const health = buildGrowthHealth({
+      postsAnalyzed: intelligence.postsAnalyzed,
+      postsCollected: intelligence.postsCollected,
+      trend: intelligence.trend,
+      weeklyFrequency: intelligence.weeklyFrequency,
+      followers: intelligence.followers,
+      medianViews: intelligence.calculated.medianViews,
+      engagementPerReach: intelligence.calculated.engagementPerReach,
+      savesPerReach: intelligence.calculated.savesPerReach,
+      sharesPerReach: intelligence.calculated.sharesPerReach,
+      viewsPerFollower: intelligence.calculated.viewsPerFollower,
+      bestFormatScore: intelligence.byFormat[0]?.score ?? null,
+      bestSlotScore: intelligence.bestSlots[0]?.score ?? null,
+    });
+    return {
+      account,
+      ...health,
+      postsAnalyzed: intelligence.postsAnalyzed,
+      postsCollected: intelligence.postsCollected,
+      periodLabel: "Últimos dados disponíveis (até 500 publicações)",
+    };
+  }));
 }
 
 /** Previsão por vizinhos comparáveis do próprio histórico. Nunca um número único. */

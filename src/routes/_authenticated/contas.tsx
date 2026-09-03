@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { AtSign, RefreshCw, KeyRound, Trash2, ShieldCheck } from "lucide-react";
+import { AtSign, RefreshCw, KeyRound, Trash2, ShieldCheck, Activity } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell, DemoBanner, EmptyState } from "@/components/AppShell";
@@ -70,13 +70,17 @@ function ContasPage() {
       title="Contas"
       subtitle="Contas Instagram Business ou Creator conectadas por token de acesso oficial"
       actions={
-        <Button size="sm" asChild>
-          <Link to="/configuracao">
-            <KeyRound className="h-4 w-4" /> Conectar por token
+        <Button size="sm" variant="outline" asChild>
+          <Link to="/saude">
+            <Activity className="h-4 w-4" /> <span className="hidden sm:inline">Saúde das contas</span>
           </Link>
         </Button>
       }
     >
+      <section className="mb-5 flex flex-col gap-3 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Central de contas</p><h2 className="mt-1 font-display text-2xl font-semibold">Conexões e identidade</h2><p className="mt-1 text-xs text-muted-foreground">Gerencie acessos, sincronização e o diagnóstico de crescimento.</p></div>
+        <Button size="sm" asChild><Link to="/configuracao"><KeyRound className="h-4 w-4" /> Conectar conta</Link></Button>
+      </section>
       {isDemo ? <DemoBanner /> : null}
 
       {accounts.isLoading ? (

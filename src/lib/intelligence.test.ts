@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildHeatmap,
+  buildGrowthHealth,
   confidenceFor,
   durationBucket,
   maturityFor,
@@ -135,5 +136,47 @@ describe("previsão", () => {
     const range = predictRange([100, 200, 300, 400])!;
     expect(range.low).toBeLessThan(range.high);
     expect(range.confidence).toBe("low");
+  });
+});
+
+describe("saúde de crescimento", () => {
+  it("mantém a nota entre 0 e 100 e informa a confiança", () => {
+    const report = buildGrowthHealth({
+      postsAnalyzed: 24,
+      postsCollected: 24,
+      trend: { direction: "up", changePct: 18 },
+      weeklyFrequency: 4,
+      followers: 1000,
+      medianViews: 1400,
+      engagementPerReach: 0.06,
+      savesPerReach: 0.015,
+      sharesPerReach: 0.012,
+      viewsPerFollower: 1.4,
+      bestFormatScore: 1.3,
+      bestSlotScore: 1.2,
+    });
+    expect(report.score).toBeGreaterThanOrEqual(0);
+    expect(report.score).toBeLessThanOrEqual(100);
+    expect(report.confidence).toBe("alta");
+    expect(report.dimensions).toHaveLength(5);
+  });
+
+  it("não transforma métricas ausentes em zero", () => {
+    const report = buildGrowthHealth({
+      postsAnalyzed: 0,
+      postsCollected: 0,
+      trend: { direction: "unknown", changePct: null },
+      weeklyFrequency: null,
+      followers: null,
+      medianViews: null,
+      engagementPerReach: null,
+      savesPerReach: null,
+      sharesPerReach: null,
+      viewsPerFollower: null,
+      bestFormatScore: null,
+      bestSlotScore: null,
+    });
+    expect(report.dimensions.every((dimension) => dimension.score === null)).toBe(true);
+    expect(report.confidence).toBe("inicial");
   });
 });

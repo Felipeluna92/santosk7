@@ -45,3 +45,10 @@ export const getLastSync = createServerFn({ method: "GET" }).middleware([require
     .maybeSingle();
   return data;
 });
+
+export const getGrowthHealth = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { buildGrowthHealthReport } = await import("./ai.server");
+    return buildGrowthHealthReport(context.userId);
+  });
