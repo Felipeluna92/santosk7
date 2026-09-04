@@ -68,9 +68,26 @@ function waitForInstagramOAuth(popup: Window, expectedState: string, expectedOri
 function Configuracao() {
   const qc = useQueryClient();
   const accounts = useQuery(accountsQuery);
-  const connected = accounts.data?.[0];
+  const list = accounts.data ?? [];
+  const connected = list.find((a) => (a.platform ?? "instagram") === "instagram");
+  const threadsConnected = list.find((a) => a.platform === "threads");
   const [connectionState, setConnectionState] = useState<ConnectionState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [threadsToken, setThreadsToken] = useState("");
+
+  const connectThreads = useMutation({
+    mutationFn: async () => {
+      const result = await connectThreadsToken({ data: { token: threadsToken } });
+      if (!result.ok) throw new Error(result.error ?? "Falha ao conectar o Threads.");
+      return result.username;
+    },
+    onSuccess: async (username) => {
+      setThreadsToken("");
+      await qc.invalidateQueries({ queryKey: ["accounts"] });
+      toast.success(`@${username} conectada no Threads.`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const connect = useMutation({
     mutationFn: async () => {
