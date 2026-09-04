@@ -31,12 +31,19 @@ export type MetaEnv = {
   appBaseUrl: string | null;
 };
 
+/** URL de callback oficial de produção. Deve estar cadastrada IGUAL no painel da Meta. */
+export const PRODUCTION_REDIRECT_URI =
+  "https://santosk7.lovable.app/api/public/oauth/instagram/callback";
+
+
 export function readMetaEnv(): MetaEnv {
   return {
     appId: process.env["META_APP_ID"] ?? null,
     appSecret: process.env["META_APP_SECRET"] ?? null,
     graphVersion: process.env["META_GRAPH_VERSION"] ?? "v23.0",
-    redirectUri: process.env["META_REDIRECT_URI"] ?? null,
+    // redirect_uri centralizada: nunca derivar da URL do navegador.
+    redirectUri:
+      process.env["INSTAGRAM_REDIRECT_URI"] ?? process.env["META_REDIRECT_URI"] ?? null,
     appBaseUrl: process.env["APP_BASE_URL"] ?? null,
   };
 }
@@ -95,13 +102,16 @@ async function graph(url: string, init?: RequestInit) {
 }
 
 export function buildAuthorizationUrl(env: MetaEnv, scopes: string[], state?: string) {
+  const redirectUri = env.redirectUri!;
   const params = new URLSearchParams({
     client_id: env.appId!,
-    redirect_uri: env.redirectUri!,
+    redirect_uri: redirectUri,
     response_type: "code",
     scope: scopes.join(","),
   });
   if (state) params.set("state", state);
+  // Log seguro: apenas a redirect_uri (sem code, token ou secret).
+  console.info("[oauth] authorize redirect_uri:", redirectUri);
   return `https://www.instagram.com/oauth/authorize?${params.toString()}`;
 }
 
@@ -111,6 +121,10 @@ export async function exchangeCodeForAccount(code: string, userId: string) {
     throw new Error("Credenciais da Meta não configuradas no servidor.");
   }
 
+  // Log seguro: apenas a redirect_uri (sem code, token ou secret).
+  console.info("[oauth] token exchange redirect_uri:", env.redirectUri);
+  await writeLog(userId, "oauth", "info", `Troca de código usando redirect_uri: ${env.redirectUri}`);
+
   const body = new URLSearchParams({
     client_id: env.appId,
     client_secret: env.appSecret,
@@ -118,6 +132,7 @@ export async function exchangeCodeForAccount(code: string, userId: string) {
     redirect_uri: env.redirectUri,
     code,
   });
+
 
   const short = await graph("https://api.instagram.com/oauth/access_token", {
     method: "POST",
