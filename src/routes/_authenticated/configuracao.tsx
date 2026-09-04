@@ -205,6 +205,67 @@ function Configuracao() {
             )}
           </div>
         </section>
+
+        <section className="mt-5 overflow-hidden rounded-2xl border border-border bg-surface shadow-panel">
+          <div className="h-1 bg-gradient-to-r from-foreground/60 via-foreground to-primary/60" />
+          <div className="p-5 sm:p-8">
+            <div className="flex items-center gap-4">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-foreground text-background">
+                <AtSign className="h-7 w-7" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="font-display text-lg font-semibold">Threads</h2>
+                  <Badge className={threadsConnected ? "border-0 bg-success/12 text-success" : "border-0 bg-muted text-muted-foreground"}>
+                    {threadsConnected ? "Conectada" : "Não conectada"}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Publicação de threads com texto, imagem ou vídeo pela API oficial do Threads.
+                </p>
+              </div>
+            </div>
+
+            {threadsConnected ? (
+              <div className="my-6 flex items-center gap-3 rounded-xl border border-success/20 bg-success/5 p-4">
+                <Avatar className="h-12 w-12 border border-border">
+                  <AvatarImage src={threadsConnected.profile_picture_url ?? undefined} alt={`@${threadsConnected.username}`} />
+                  <AvatarFallback className="bg-foreground/10 font-semibold">{threadsConnected.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-display text-sm font-semibold">@{threadsConnected.username}</p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-success">
+                    <Check className="h-3.5 w-3.5" /> Token guardado apenas no servidor
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-6 space-y-2">
+              <Label className="text-xs">Token de acesso do Threads</Label>
+              <Input
+                type="password"
+                autoComplete="off"
+                value={threadsToken}
+                onChange={(e) => setThreadsToken(e.target.value)}
+                placeholder="Cole aqui o token gerado no painel de apps da Meta"
+                className="font-mono text-xs"
+              />
+              <Button
+                className="mt-2 h-11 w-full text-sm font-semibold"
+                variant="secondary"
+                disabled={connectThreads.isPending || threadsToken.trim().length < 20}
+                onClick={() => connectThreads.mutate()}
+              >
+                {connectThreads.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <AtSign className="h-4 w-4" />}
+                {threadsConnected ? "Reconectar Threads" : "Conectar Threads"}
+              </Button>
+              <p className="flex items-center justify-center gap-1.5 pt-2 text-center text-[11px] text-muted-foreground">
+                <ShieldCheck className="h-3.5 w-3.5" /> Requer as permissões threads_basic e threads_content_publish.
+              </p>
+            </div>
+          </div>
+        </section>
       </main>
     </AppShell>
   );
