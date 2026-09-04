@@ -29,8 +29,8 @@ export const getAuthorizationUrl = createServerFn({ method: "POST" })
       return { url: null, error: "Configure META_APP_ID e META_REDIRECT_URI antes de conectar." };
     }
     const url = buildAuthorizationUrl(env, data.scopes?.length ? data.scopes : DEFAULT_SCOPES, data.state);
-    await writeLog(context.userId, "oauth", "info", "URL de autorização oficial gerada.");
-    return { url, callbackOrigin: env.appBaseUrl, error: null };
+    await writeLog(context.userId, "oauth", "info", `URL de autorização gerada com redirect_uri: ${env.redirectUri}`);
+    return { url, callbackOrigin: new URL(env.redirectUri).origin, error: null };
   });
 
 export const completeInstagramConnection = createServerFn({ method: "POST" })
