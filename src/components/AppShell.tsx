@@ -21,7 +21,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import logoAsset from "@/assets/sk7-logo.png.asset.json";
+import logoAsset from "@/assets/sk7-logo-2026.png.asset.json";
 
 const NAV = [
   { section: "Visão", items: [
