@@ -17,16 +17,33 @@ export const getMetaStatus = createServerFn({ method: "GET" }).middleware([requi
 
 export const getAuthorizationUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { scopes?: string[] }) => data ?? {})
+  .inputValidator((data: { scopes?: string[]; state: string }) => {
+    const state = typeof data?.state === "string" ? data.state.trim() : "";
+    if (!/^[a-zA-Z0-9_-]{32,128}$/.test(state)) throw new Error("Estado de conexão inválido.");
+    return { scopes: data?.scopes, state };
+  })
   .handler(async ({ data, context }) => {
     const { readMetaEnv, buildAuthorizationUrl, DEFAULT_SCOPES, writeLog } = await import("./meta.server");
     const env = readMetaEnv();
     if (!env.appId || !env.redirectUri) {
       return { url: null, error: "Configure META_APP_ID e META_REDIRECT_URI antes de conectar." };
     }
-    const url = buildAuthorizationUrl(env, data.scopes?.length ? data.scopes : DEFAULT_SCOPES);
+    const url = buildAuthorizationUrl(env, data.scopes?.length ? data.scopes : DEFAULT_SCOPES, data.state);
     await writeLog(context.userId, "oauth", "info", "URL de autorização oficial gerada.");
-    return { url, error: null };
+    return { url, callbackOrigin: env.appBaseUrl, error: null };
+  });
+
+export const completeInstagramConnection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { code: string }) => {
+    const code = typeof data?.code === "string" ? data.code.trim() : "";
+    if (!code || code.length > 2048) throw new Error("Código de autorização inválido.");
+    return { code };
+  })
+  .handler(async ({ data, context }) => {
+    const { exchangeCodeForAccount } = await import("./meta.server");
+    const account = await exchangeCodeForAccount(data.code, context.userId);
+    return { ok: true as const, username: account.username };
   });
 
 export const syncAccount = createServerFn({ method: "POST" })

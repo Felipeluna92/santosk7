@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import logoAsset from "@/assets/sk7-logo.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
-  ssr: false,
   head: () => ({ meta: [
     { title: "Acesso — SK7 Studio" },
     { name: "description", content: "Acesse o Command Center privado da SK7 Studio." },
