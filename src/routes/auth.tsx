@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import logoAsset from "@/assets/sk7-logo.png.asset.json";
+import logoAsset from "@/assets/sk7-logo-2026.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [
@@ -51,7 +51,7 @@ function AuthPage() {
       <div className="relative hidden flex-col justify-between overflow-hidden border-r border-border bg-foreground p-12 text-primary-foreground lg:flex">
         <div className="absolute inset-0 bg-primary/15 [mask-image:linear-gradient(to_bottom_right,black,transparent_72%)]" />
         <div className="relative z-10 flex items-center gap-3">
-          <img src={logoAsset.url} className="h-10 w-10 rounded-xl" />
+          <img src={logoAsset.url} alt="SK7" className="h-12 w-12 rounded-xl object-cover" />
           <span className="font-display text-lg font-bold tracking-tight">SK7 Studio</span>
         </div>
         <div className="relative z-10 max-w-md space-y-4">

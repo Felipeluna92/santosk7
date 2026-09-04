@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Check, Instagram, LockKeyhole, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
-import logoAsset from "@/assets/sk7-logo.png.asset.json";
+import logoAsset from "@/assets/sk7-logo-2026.png.asset.json";
 import { AppShell } from "@/components/AppShell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
