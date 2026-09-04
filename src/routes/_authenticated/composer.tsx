@@ -264,20 +264,48 @@ function Composer() {
   return (
     <AppShell title="Publicar" subtitle="Criação, duplicação e agendamento em vários horários">
 
+      <div className="mb-4 inline-flex rounded-lg border border-border bg-muted/60 p-1">
+        {([
+          { id: "instagram" as const, label: "Instagram" },
+          { id: "threads" as const, label: "Threads" },
+        ]).map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => {
+              setPlatform(p.id);
+              setAccountIds([]);
+              if (p.id === "threads") setType("POST");
+            }}
+            className={`rounded-md px-4 py-1.5 text-xs font-semibold transition-colors ${
+              platform === p.id ? "bg-surface text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       <Tabs value={type} onValueChange={(v) => setType(v as typeof type)}>
-        <TabsList className="grid w-full grid-cols-5 gap-1 bg-surface px-1 sm:inline-flex sm:w-auto">
+        <TabsList
+          className={`grid w-full gap-1 bg-surface px-1 sm:inline-flex sm:w-auto ${isThreads ? "grid-cols-2" : "grid-cols-5"}`}
+        >
           <TabsTrigger value="POST" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-            <ImageIcon className="mr-1 h-3.5 w-3.5 shrink-0" /> Post
+            <ImageIcon className="mr-1 h-3.5 w-3.5 shrink-0" /> {isThreads ? "Thread" : "Post"}
           </TabsTrigger>
-          <TabsTrigger value="REEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-            <Film className="mr-1 h-3.5 w-3.5 shrink-0" /> Reel
-          </TabsTrigger>
-          <TabsTrigger value="CAROUSEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-            <Layers className="mr-1 h-3.5 w-3.5 shrink-0" /> Carrossel
-          </TabsTrigger>
-          <TabsTrigger value="STORY" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-            <CircleDot className="mr-1 h-3.5 w-3.5 shrink-0" /> Story
-          </TabsTrigger>
+          {isThreads ? null : (
+            <>
+              <TabsTrigger value="REEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+                <Film className="mr-1 h-3.5 w-3.5 shrink-0" /> Reel
+              </TabsTrigger>
+              <TabsTrigger value="CAROUSEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+                <Layers className="mr-1 h-3.5 w-3.5 shrink-0" /> Carrossel
+              </TabsTrigger>
+              <TabsTrigger value="STORY" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+                <CircleDot className="mr-1 h-3.5 w-3.5 shrink-0" /> Story
+              </TabsTrigger>
+            </>
+          )}
           <TabsTrigger value="DRAFTS" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
             <FileText className="mr-1 h-3.5 w-3.5 shrink-0" /> Rascunhos
           </TabsTrigger>
