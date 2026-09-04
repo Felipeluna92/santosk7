@@ -94,13 +94,14 @@ async function graph(url: string, init?: RequestInit) {
   return json;
 }
 
-export function buildAuthorizationUrl(env: MetaEnv, scopes: string[]) {
+export function buildAuthorizationUrl(env: MetaEnv, scopes: string[], state?: string) {
   const params = new URLSearchParams({
     client_id: env.appId!,
     redirect_uri: env.redirectUri!,
     response_type: "code",
     scope: scopes.join(","),
   });
+  if (state) params.set("state", state);
   return `https://www.instagram.com/oauth/authorize?${params.toString()}`;
 }
 
