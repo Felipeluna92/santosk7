@@ -252,6 +252,7 @@ export type Database = {
           id: string
           instagram_user_id: string
           last_sync_at: string | null
+          platform: string
           profile_picture_url: string | null
           scopes: string[]
           status: string
@@ -267,6 +268,7 @@ export type Database = {
           id?: string
           instagram_user_id: string
           last_sync_at?: string | null
+          platform?: string
           profile_picture_url?: string | null
           scopes?: string[]
           status?: string
@@ -282,6 +284,7 @@ export type Database = {
           id?: string
           instagram_user_id?: string
           last_sync_at?: string | null
+          platform?: string
           profile_picture_url?: string | null
           scopes?: string[]
           status?: string
@@ -430,6 +433,7 @@ export type Database = {
           media_url: string | null
           meta_container_id: string | null
           meta_media_id: string | null
+          platform: string
           published_at: string | null
           scheduled_at: string | null
           status: string
@@ -449,6 +453,7 @@ export type Database = {
           media_url?: string | null
           meta_container_id?: string | null
           meta_media_id?: string | null
+          platform?: string
           published_at?: string | null
           scheduled_at?: string | null
           status?: string
@@ -468,6 +473,7 @@ export type Database = {
           media_url?: string | null
           meta_container_id?: string | null
           meta_media_id?: string | null
+          platform?: string
           published_at?: string | null
           scheduled_at?: string | null
           status?: string
