@@ -241,7 +241,11 @@ function Historico() {
                   </TableCell>
                   <TableCell className="text-xs">@{nameOf(p.account_id)}</TableCell>
 
-                  <TableCell className="text-xs">{POST_TYPE_LABEL[p.type] ?? p.type}</TableCell>
+                  <TableCell className="text-xs">
+                    {("platform" in p && p.platform === "threads")
+                      ? "Thread"
+                      : (POST_TYPE_LABEL[p.type] ?? p.type)}
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {fmtDate(p.published_at ?? p.scheduled_at ?? p.created_at)}
                   </TableCell>
