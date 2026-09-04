@@ -141,8 +141,16 @@ function Composer() {
 
 
   const capabilityError = (() => {
-    if (!accountList.length) return "Conecte uma conta Instagram profissional para publicar.";
+    if (!accountList.length)
+      return isThreads
+        ? "Conecte uma conta do Threads para publicar."
+        : "Conecte uma conta Instagram profissional para publicar.";
     if (!accountIds.length) return "Selecione ao menos uma conta que vai publicar.";
+    if (isThreads) {
+      const noScope = selectedAccounts.find((a) => !(a.scopes ?? []).includes("threads_content_publish"));
+      if (noScope) return `@${noScope.username} não tem a permissão threads_content_publish aprovada.`;
+      return null;
+    }
     const bad = selectedAccounts.find(
       (a) => a.account_type && !["BUSINESS", "CREATOR", "MEDIA_CREATOR"].includes(a.account_type),
     );
@@ -155,6 +163,13 @@ function Composer() {
   })();
 
   const mediaError = (() => {
+    if (isThreads) {
+      if (!mediaUrl.trim() && !caption.trim() && !hashtags.trim())
+        return "Escreva um texto ou anexe uma mídia para publicar no Threads.";
+      if (mediaUrl.trim() && !isPublicUrl(mediaUrl))
+        return "A URL precisa ser pública e acessível pelo Threads (http/https).";
+      return null;
+    }
     if (type === "CAROUSEL") {
       if (carouselUrls.length < 2) return "Um carrossel precisa de pelo menos 2 URLs públicas.";
       if (carouselUrls.length > 10) return "Máximo de 10 mídias por carrossel.";
@@ -168,12 +183,13 @@ function Composer() {
 
   const payload = (accId: string | null, when?: string | null) => ({
     account_id: accId,
-    type,
-    caption: type === "STORY" ? null : caption || null,
-    hashtags: type === "STORY" ? null : hashtags || null,
-    media_url: type === "CAROUSEL" ? null : mediaUrl || null,
-    cover_url: type === "REEL" ? coverUrl || null : null,
-    carousel_urls: type === "CAROUSEL" ? carouselUrls : [],
+    platform,
+    type: isThreads ? "POST" : type,
+    caption: !isThreads && type === "STORY" ? null : caption || null,
+    hashtags: !isThreads && type === "STORY" ? null : hashtags || null,
+    media_url: !isThreads && type === "CAROUSEL" ? null : mediaUrl || null,
+    cover_url: !isThreads && type === "REEL" ? coverUrl || null : null,
+    carousel_urls: !isThreads && type === "CAROUSEL" ? carouselUrls : [],
     scheduled_at: when ? new Date(when).toISOString() : null,
   });
 
