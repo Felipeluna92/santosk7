@@ -262,6 +262,19 @@ async function tokenFor(accountId: string, userId: string) {
 export async function syncAccountById(accountId: string, userId: string) {
   const env = readMetaEnv();
   const token = await tokenFor(accountId, userId);
+  {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row } = await supabaseAdmin
+      .from("instagram_accounts")
+      .select("platform")
+      .eq("id", accountId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (row?.platform === "threads") {
+      const { syncThreadsAccount } = await import("./threads.server");
+      return syncThreadsAccount(accountId, userId, token);
+    }
+  }
   const me = await graph(
     `https://graph.instagram.com/${env.graphVersion}/me?fields=user_id,username,name,profile_picture_url,account_type&access_token=${encodeURIComponent(
       token,
