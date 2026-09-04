@@ -437,14 +437,16 @@ function Composer() {
                 ) : (
                   <div className="space-y-3">
                     <MediaUpload
-                      label={t === "REEL" ? "Vídeo do Reel" : "Imagem do post"}
+                      label={isThreads ? "Mídia do thread (opcional)" : t === "REEL" ? "Vídeo do Reel" : "Imagem do post"}
                       kind={t === "REEL" ? "video" : "image"}
                       value={mediaUrl}
                       onChange={setMediaUrl}
                       hint={
-                        t === "REEL"
-                          ? "MP4 ou MOV, até 300 MB. Gera uma URL pública HTTPS automaticamente."
-                          : "JPG ou PNG, até 8 MB. Gera uma URL pública HTTPS automaticamente."
+                        isThreads
+                          ? "Opcional: o Threads aceita texto puro, uma imagem ou um vídeo por publicação."
+                          : t === "REEL"
+                            ? "MP4 ou MOV, até 300 MB. Gera uma URL pública HTTPS automaticamente."
+                            : "JPG ou PNG, até 8 MB. Gera uma URL pública HTTPS automaticamente."
                       }
                     />
                     {t === "REEL" ? (
