@@ -30,7 +30,7 @@ export const getAuthorizationUrl = createServerFn({ method: "POST" })
     }
     const url = buildAuthorizationUrl(env, data.scopes?.length ? data.scopes : DEFAULT_SCOPES, data.state);
     await writeLog(context.userId, "oauth", "info", `URL de autorização gerada com redirect_uri: ${env.redirectUri}`);
-    return { url, callbackOrigin: env.appBaseUrl, error: null };
+    return { url, callbackOrigin: new URL(env.redirectUri).origin, error: null };
   });
 
 export const completeInstagramConnection = createServerFn({ method: "POST" })
