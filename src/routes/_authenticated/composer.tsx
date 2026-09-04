@@ -85,6 +85,7 @@ function Composer() {
   const accounts = useQuery(accountsQuery);
   const posts = useQuery(postsQuery);
 
+  const [platform, setPlatform] = useState<"instagram" | "threads">("instagram");
   const [type, setType] = useState<"POST" | "REEL" | "CAROUSEL" | "STORY">("POST");
   const [accountIds, setAccountIds] = useState<string[]>([]);
   const [mediaUrl, setMediaUrl] = useState(midia ?? "");
@@ -98,7 +99,8 @@ function Composer() {
   const [extraTimes, setExtraTimes] = useState<string[]>([]);
   const [newTime, setNewTime] = useState("");
 
-  const accountList = accounts.data ?? [];
+  const isThreads = platform === "threads";
+  const accountList = (accounts.data ?? []).filter((a) => (a.platform ?? "instagram") === platform);
   const selectedAccounts = accountList.filter((a) => accountIds.includes(a.id));
   const account = selectedAccounts[0];
   const drafts = (posts.data ?? []).filter((p) => p.status === "draft");
