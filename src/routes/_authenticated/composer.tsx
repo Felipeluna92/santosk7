@@ -389,7 +389,9 @@ function Composer() {
                   </div>
                   <div className="space-y-1 rounded-md border border-border bg-background p-2">
                     {accountList.length === 0 ? (
-                      <p className="px-1 py-2 text-[11px] text-muted-foreground">Nenhuma conta conectada</p>
+                      <p className="px-1 py-2 text-[11px] text-muted-foreground">
+                        {isThreads ? "Nenhuma conta do Threads conectada" : "Nenhuma conta do Instagram conectada"}
+                      </p>
                     ) : (
                       accountList.map((a) => (
                         <label
