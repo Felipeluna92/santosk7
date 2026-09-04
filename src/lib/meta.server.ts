@@ -262,6 +262,19 @@ async function tokenFor(accountId: string, userId: string) {
 export async function syncAccountById(accountId: string, userId: string) {
   const env = readMetaEnv();
   const token = await tokenFor(accountId, userId);
+  {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row } = await supabaseAdmin
+      .from("instagram_accounts")
+      .select("platform")
+      .eq("id", accountId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (row?.platform === "threads") {
+      const { syncThreadsAccount } = await import("./threads.server");
+      return syncThreadsAccount(accountId, userId, token);
+    }
+  }
   const me = await graph(
     `https://graph.instagram.com/${env.graphVersion}/me?fields=user_id,username,name,profile_picture_url,account_type&access_token=${encodeURIComponent(
       token,
@@ -355,6 +368,44 @@ export async function publishPostById(postId: string, userId?: string) {
     .eq("user_id", ownerId)
     .maybeSingle();
   if (!account) await abort("Conta não encontrada ou removida do app.");
+
+  if (account!.platform === "threads") {
+    await supabaseAdmin.from("posts").update({ status: "publishing", error_message: null }).eq("id", postId).eq("user_id", ownerId);
+    try {
+      const token = await tokenFor(accountId, ownerId);
+      const { publishThreadsPost } = await import("./threads.server");
+      const result = await publishThreadsPost(post, account!.instagram_user_id, token);
+      if (result.retry) {
+        await supabaseAdmin
+          .from("posts")
+          .update({ status: "scheduled", meta_container_id: result.containerId, error_message: null })
+          .eq("id", postId);
+        await writeLog(ownerId, "publish", "warn", "Mídia ainda processando no Threads; nova tentativa em instantes.", { postId });
+        throw new Error("Mídia ainda processando no Threads; vamos tentar de novo em instantes.");
+      }
+      await supabaseAdmin
+        .from("posts")
+        .update({
+          status: "published",
+          meta_container_id: result.containerId,
+          meta_media_id: result.mediaId,
+          published_at: new Date().toISOString(),
+          error_message: null,
+        })
+        .eq("id", postId);
+      await writeLog(ownerId, "publish", "success", "Publicado no Threads com sucesso.", { postId, mediaId: result.mediaId });
+      return { ok: true, mediaId: result.mediaId ?? "" };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Falha ao publicar no Threads.";
+      const { data: current } = await supabaseAdmin.from("posts").select("status").eq("id", postId).maybeSingle();
+      if (current?.status !== "scheduled") {
+        await supabaseAdmin.from("posts").update({ status: "failed", error_message: message }).eq("id", postId);
+        await writeLog(ownerId, "publish", "error", message, { postId });
+      }
+      throw new Error(message);
+    }
+  }
+
   if (!(account!.scopes ?? []).includes("instagram_business_content_publish")) {
     await abort(
       "Esta conta não tem a permissão instagram_business_content_publish aprovada. Reconecte concedendo a permissão.",

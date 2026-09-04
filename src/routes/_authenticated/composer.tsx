@@ -85,6 +85,7 @@ function Composer() {
   const accounts = useQuery(accountsQuery);
   const posts = useQuery(postsQuery);
 
+  const [platform, setPlatform] = useState<"instagram" | "threads">("instagram");
   const [type, setType] = useState<"POST" | "REEL" | "CAROUSEL" | "STORY">("POST");
   const [accountIds, setAccountIds] = useState<string[]>([]);
   const [mediaUrl, setMediaUrl] = useState(midia ?? "");
@@ -98,7 +99,8 @@ function Composer() {
   const [extraTimes, setExtraTimes] = useState<string[]>([]);
   const [newTime, setNewTime] = useState("");
 
-  const accountList = accounts.data ?? [];
+  const isThreads = platform === "threads";
+  const accountList = (accounts.data ?? []).filter((a) => (a.platform ?? "instagram") === platform);
   const selectedAccounts = accountList.filter((a) => accountIds.includes(a.id));
   const account = selectedAccounts[0];
   const drafts = (posts.data ?? []).filter((p) => p.status === "draft");
@@ -139,8 +141,16 @@ function Composer() {
 
 
   const capabilityError = (() => {
-    if (!accountList.length) return "Conecte uma conta Instagram profissional para publicar.";
+    if (!accountList.length)
+      return isThreads
+        ? "Conecte uma conta do Threads para publicar."
+        : "Conecte uma conta Instagram profissional para publicar.";
     if (!accountIds.length) return "Selecione ao menos uma conta que vai publicar.";
+    if (isThreads) {
+      const noScope = selectedAccounts.find((a) => !(a.scopes ?? []).includes("threads_content_publish"));
+      if (noScope) return `@${noScope.username} não tem a permissão threads_content_publish aprovada.`;
+      return null;
+    }
     const bad = selectedAccounts.find(
       (a) => a.account_type && !["BUSINESS", "CREATOR", "MEDIA_CREATOR"].includes(a.account_type),
     );
@@ -153,6 +163,13 @@ function Composer() {
   })();
 
   const mediaError = (() => {
+    if (isThreads) {
+      if (!mediaUrl.trim() && !caption.trim() && !hashtags.trim())
+        return "Escreva um texto ou anexe uma mídia para publicar no Threads.";
+      if (mediaUrl.trim() && !isPublicUrl(mediaUrl))
+        return "A URL precisa ser pública e acessível pelo Threads (http/https).";
+      return null;
+    }
     if (type === "CAROUSEL") {
       if (carouselUrls.length < 2) return "Um carrossel precisa de pelo menos 2 URLs públicas.";
       if (carouselUrls.length > 10) return "Máximo de 10 mídias por carrossel.";
@@ -166,12 +183,13 @@ function Composer() {
 
   const payload = (accId: string | null, when?: string | null) => ({
     account_id: accId,
-    type,
-    caption: type === "STORY" ? null : caption || null,
-    hashtags: type === "STORY" ? null : hashtags || null,
-    media_url: type === "CAROUSEL" ? null : mediaUrl || null,
-    cover_url: type === "REEL" ? coverUrl || null : null,
-    carousel_urls: type === "CAROUSEL" ? carouselUrls : [],
+    platform,
+    type: isThreads ? "POST" : type,
+    caption: !isThreads && type === "STORY" ? null : caption || null,
+    hashtags: !isThreads && type === "STORY" ? null : hashtags || null,
+    media_url: !isThreads && type === "CAROUSEL" ? null : mediaUrl || null,
+    cover_url: !isThreads && type === "REEL" ? coverUrl || null : null,
+    carousel_urls: !isThreads && type === "CAROUSEL" ? carouselUrls : [],
     scheduled_at: when ? new Date(when).toISOString() : null,
   });
 
@@ -246,20 +264,48 @@ function Composer() {
   return (
     <AppShell title="Publicar" subtitle="Criação, duplicação e agendamento em vários horários">
 
+      <div className="mb-4 inline-flex rounded-lg border border-border bg-muted/60 p-1">
+        {([
+          { id: "instagram" as const, label: "Instagram" },
+          { id: "threads" as const, label: "Threads" },
+        ]).map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => {
+              setPlatform(p.id);
+              setAccountIds([]);
+              if (p.id === "threads") setType("POST");
+            }}
+            className={`rounded-md px-4 py-1.5 text-xs font-semibold transition-colors ${
+              platform === p.id ? "bg-surface text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       <Tabs value={type} onValueChange={(v) => setType(v as typeof type)}>
-        <TabsList className="grid w-full grid-cols-5 gap-1 bg-surface px-1 sm:inline-flex sm:w-auto">
+        <TabsList
+          className={`grid w-full gap-1 bg-surface px-1 sm:inline-flex sm:w-auto ${isThreads ? "grid-cols-2" : "grid-cols-5"}`}
+        >
           <TabsTrigger value="POST" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-            <ImageIcon className="mr-1 h-3.5 w-3.5 shrink-0" /> Post
+            <ImageIcon className="mr-1 h-3.5 w-3.5 shrink-0" /> {isThreads ? "Thread" : "Post"}
           </TabsTrigger>
-          <TabsTrigger value="REEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-            <Film className="mr-1 h-3.5 w-3.5 shrink-0" /> Reel
-          </TabsTrigger>
-          <TabsTrigger value="CAROUSEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-            <Layers className="mr-1 h-3.5 w-3.5 shrink-0" /> Carrossel
-          </TabsTrigger>
-          <TabsTrigger value="STORY" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-            <CircleDot className="mr-1 h-3.5 w-3.5 shrink-0" /> Story
-          </TabsTrigger>
+          {isThreads ? null : (
+            <>
+              <TabsTrigger value="REEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+                <Film className="mr-1 h-3.5 w-3.5 shrink-0" /> Reel
+              </TabsTrigger>
+              <TabsTrigger value="CAROUSEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+                <Layers className="mr-1 h-3.5 w-3.5 shrink-0" /> Carrossel
+              </TabsTrigger>
+              <TabsTrigger value="STORY" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+                <CircleDot className="mr-1 h-3.5 w-3.5 shrink-0" /> Story
+              </TabsTrigger>
+            </>
+          )}
           <TabsTrigger value="DRAFTS" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
             <FileText className="mr-1 h-3.5 w-3.5 shrink-0" /> Rascunhos
           </TabsTrigger>
@@ -343,7 +389,9 @@ function Composer() {
                   </div>
                   <div className="space-y-1 rounded-md border border-border bg-background p-2">
                     {accountList.length === 0 ? (
-                      <p className="px-1 py-2 text-[11px] text-muted-foreground">Nenhuma conta conectada</p>
+                      <p className="px-1 py-2 text-[11px] text-muted-foreground">
+                        {isThreads ? "Nenhuma conta do Threads conectada" : "Nenhuma conta do Instagram conectada"}
+                      </p>
                     ) : (
                       accountList.map((a) => (
                         <label
@@ -389,14 +437,16 @@ function Composer() {
                 ) : (
                   <div className="space-y-3">
                     <MediaUpload
-                      label={t === "REEL" ? "Vídeo do Reel" : "Imagem do post"}
+                      label={isThreads ? "Mídia do thread (opcional)" : t === "REEL" ? "Vídeo do Reel" : "Imagem do post"}
                       kind={t === "REEL" ? "video" : "image"}
                       value={mediaUrl}
                       onChange={setMediaUrl}
                       hint={
-                        t === "REEL"
-                          ? "MP4 ou MOV, até 300 MB. Gera uma URL pública HTTPS automaticamente."
-                          : "JPG ou PNG, até 8 MB. Gera uma URL pública HTTPS automaticamente."
+                        isThreads
+                          ? "Opcional: o Threads aceita texto puro, uma imagem ou um vídeo por publicação."
+                          : t === "REEL"
+                            ? "MP4 ou MOV, até 300 MB. Gera uma URL pública HTTPS automaticamente."
+                            : "JPG ou PNG, até 8 MB. Gera uma URL pública HTTPS automaticamente."
                       }
                     />
                     {t === "REEL" ? (

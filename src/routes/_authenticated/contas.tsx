@@ -111,7 +111,12 @@ function ContasPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="truncate font-display text-sm font-semibold">@{acc.username}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate font-display text-sm font-semibold">@{acc.username}</p>
+                    <span className="shrink-0 rounded bg-secondary px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                      {("platform" in acc && acc.platform === "threads") ? "Threads" : "Instagram"}
+                    </span>
+                  </div>
                   <p className="truncate text-[11px] text-muted-foreground">
                     {acc.display_name || "Sem nome"} · ID {acc.instagram_user_id}
                   </p>
