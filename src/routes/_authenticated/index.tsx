@@ -132,11 +132,16 @@ function Dashboard() {
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
-            label="Views registradas"
+            label="Views (24h)"
             value={insights.isLoading ? "…" : hasViews ? nf.format(totalViews) : "—"}
-            hint={hasViews ? "Últimas 24 horas" : viewsError ?? "Token sem permissão de insights"}
+            hint={
+              hasViews || has7d || has30d
+                ? `7 dias: ${has7d ? nf.format(totalViews7d) : "—"} · 30 dias: ${has30d ? nf.format(totalViews30d) : "—"}`
+                : viewsError ?? "Token sem permissão de insights"
+            }
             icon={Eye}
           />
+
           <MetricCard
             label="Seguidores"
             value={insights.isLoading ? "…" : hasFollowers ? nf.format(totalFollowers) : "—"}
