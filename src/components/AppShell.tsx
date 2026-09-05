@@ -12,6 +12,7 @@ import {
   LogOut,
   BrainCircuit,
   Activity,
+  BarChart3,
   MoreHorizontal,
   Plus,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const NAV = [
   { section: "Visão", items: [
     { to: "/", label: "Visão geral", icon: LayoutDashboard },
     { to: "/saude", label: "Saúde", icon: Activity, highlight: true },
+    { to: "/metricas", label: "Métricas", icon: BarChart3 },
     { to: "/ai", label: "Inteligência", icon: BrainCircuit },
   ] },
   { section: "Conteúdo", items: [
