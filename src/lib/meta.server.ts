@@ -85,7 +85,11 @@ export function humanizeMetaError(payload: unknown): string {
   if (raw.includes("platform app")) {
     return "Esta conexão pertence ao app anterior da Meta. Vá em Conexões e conecte a conta novamente.";
   }
+  if (raw.includes("developer role") || raw.includes("função de desenvolvedor")) {
+    return "O app da Meta ainda está em modo de desenvolvimento: só contas com papel de administrador, desenvolvedor ou testador podem conectar. Adicione esta conta do Instagram como testadora no app (e aceite o convite pelo Instagram), ou coloque o app em modo ativo.";
+  }
   if (err.error_user_msg) return err.error_user_msg;
+
   const map: Record<number, string> = {
     190: "O token de acesso expirou ou foi revogado. Reconecte a conta.",
     10: "Sua conta ou app não tem permissão para essa ação. Verifique as permissões aprovadas.",
