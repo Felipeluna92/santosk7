@@ -81,6 +81,10 @@ export function humanizeMetaError(payload: unknown): string {
   const err = (payload as { error?: { message?: string; code?: number; error_user_msg?: string } })
     ?.error;
   if (!err) return "Erro desconhecido ao falar com a API da Meta.";
+  const raw = `${err.message ?? ""} ${err.error_user_msg ?? ""}`.toLowerCase();
+  if (raw.includes("platform app")) {
+    return "Esta conexão pertence ao app anterior da Meta. Vá em Conexões e conecte a conta novamente.";
+  }
   if (err.error_user_msg) return err.error_user_msg;
   const map: Record<number, string> = {
     190: "O token de acesso expirou ou foi revogado. Reconecte a conta.",
