@@ -609,6 +609,18 @@ export async function publishPendingNow(userId?: string) {
   return { ok, failed, skipped, total: (pending ?? []).length };
 }
 
+/** Soma de views num intervalo (janela em dias) usando a métrica oficial `views`. */
+async function viewsInWindow(env: ReturnType<typeof readMetaEnv>, token: string, days: number) {
+  const until = Math.floor(Date.now() / 1000);
+  const since = until - days * 86400;
+  const res = await graph(
+    `https://graph.instagram.com/${env.graphVersion}/me/insights?metric=views&period=day&metric_type=total_value&since=${since}&until=${until}&access_token=${encodeURIComponent(token)}`,
+  );
+  const arr = (res["data"] as { total_value?: { value?: number } }[] | undefined) ?? [];
+  const value = arr.find((metric) => typeof metric.total_value?.value === "number")?.total_value?.value;
+  return typeof value === "number" ? value : null;
+}
+
 export async function fetchAccountsInsights(userId: string) {
   const env = readMetaEnv();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -624,6 +636,8 @@ export async function fetchAccountsInsights(userId: string) {
     followers: number | null;
     mediaCount: number | null;
     views: number | null;
+    views7d: number | null;
+    views30d: number | null;
     error?: string;
   }[] = [];
 
@@ -633,28 +647,28 @@ export async function fetchAccountsInsights(userId: string) {
       const me = await graph(
         `https://graph.instagram.com/${env.graphVersion}/me?fields=followers_count,media_count&access_token=${encodeURIComponent(token)}`,
       );
-      let views: number | null = null;
       let insightsError: string | undefined;
-      try {
-        const until = Math.floor(Date.now() / 1000);
-        const since = until - 24 * 60 * 60;
-        const ins = await graph(
-          `https://graph.instagram.com/${env.graphVersion}/me/insights?metric=views&period=day&metric_type=total_value&since=${since}&until=${until}&access_token=${encodeURIComponent(token)}`,
-        );
-        const arr = (ins["data"] as { total_value?: { value?: number } }[] | undefined) ?? [];
-        const value = arr.find((metric) => typeof metric.total_value?.value === "number")?.total_value?.value;
-        views = typeof value === "number" ? value : null;
-        if (views === null) insightsError = "A API não retornou views para esta conta nas últimas 24 horas.";
-      } catch (e) {
-        views = null;
-        insightsError = e instanceof Error ? e.message : "Métrica de views indisponível.";
+      const [d1, d7, d30] = await Promise.all(
+        [1, 7, 30].map(async (d) => {
+          try {
+            return await viewsInWindow(env, token, d);
+          } catch (e) {
+            if (!insightsError) insightsError = e instanceof Error ? e.message : "Métrica de views indisponível.";
+            return null;
+          }
+        }),
+      );
+      if (d1 === null && d7 === null && d30 === null && !insightsError) {
+        insightsError = "A API não retornou views para esta conta.";
       }
       results.push({
         accountId: acc.id,
         username: acc.username,
         followers: (me["followers_count"] as number) ?? null,
         mediaCount: (me["media_count"] as number) ?? null,
-        views,
+        views: d1 ?? null,
+        views7d: d7 ?? null,
+        views30d: d30 ?? null,
         ...(insightsError ? { error: insightsError } : {}),
       });
     } catch (e) {
@@ -664,12 +678,15 @@ export async function fetchAccountsInsights(userId: string) {
         followers: null,
         mediaCount: null,
         views: null,
+        views7d: null,
+        views30d: null,
         error: e instanceof Error ? e.message : "Indisponível",
       });
     }
   }
   return results;
 }
+
 
 export async function fetchInsightsTimeseries(userId: string, days = 30) {
   const env = readMetaEnv();

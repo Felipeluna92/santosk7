@@ -105,7 +105,14 @@ export const getAccountsInsights = createServerFn({ method: "GET" }).middleware(
   return fetchAccountsInsights(context.userId);
 });
 
-export const getInsightsTimeseries = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
-  const { fetchInsightsTimeseries } = await import("./meta.server");
-  return fetchInsightsTimeseries(context.userId, 14);
-});
+export const getInsightsTimeseries = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { days?: number } | undefined) => {
+    const days = Number(input?.days ?? 7);
+    return { days: [7, 14, 30].includes(days) ? days : 7 };
+  })
+  .handler(async ({ data, context }) => {
+    const { fetchInsightsTimeseries } = await import("./meta.server");
+    return fetchInsightsTimeseries(context.userId, data.days);
+  });
+

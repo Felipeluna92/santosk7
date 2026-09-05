@@ -86,14 +86,21 @@ function Dashboard() {
     followers: number | null;
     mediaCount: number | null;
     views: number | null;
+    views7d?: number | null;
+    views30d?: number | null;
     error?: string;
   };
   const rows: InsightRow[] = (insights.data as InsightRow[] | undefined) ?? [];
   const totalViews = rows.reduce((a, r) => a + (r.views ?? 0), 0);
+  const totalViews7d = rows.reduce((a, r) => a + (r.views7d ?? 0), 0);
+  const totalViews30d = rows.reduce((a, r) => a + (r.views30d ?? 0), 0);
   const totalFollowers = rows.reduce((a, r) => a + (r.followers ?? 0), 0);
   const hasViews = rows.some((r) => r.views !== null);
+  const has7d = rows.some((r) => (r.views7d ?? null) !== null);
+  const has30d = rows.some((r) => (r.views30d ?? null) !== null);
   const hasFollowers = rows.some((r) => r.followers !== null);
   const viewsError = rows.find((r) => r.views === null && r.error)?.error;
+
 
   return (
     <AppShell title="Painel" subtitle="Sua operação em um único fluxo">
@@ -125,11 +132,16 @@ function Dashboard() {
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
-            label="Views registradas"
+            label="Views (24h)"
             value={insights.isLoading ? "…" : hasViews ? nf.format(totalViews) : "—"}
-            hint={hasViews ? "Últimas 24 horas" : viewsError ?? "Token sem permissão de insights"}
+            hint={
+              hasViews || has7d || has30d
+                ? `7 dias: ${has7d ? nf.format(totalViews7d) : "—"} · 30 dias: ${has30d ? nf.format(totalViews30d) : "—"}`
+                : viewsError ?? "Token sem permissão de insights"
+            }
             icon={Eye}
           />
+
           <MetricCard
             label="Seguidores"
             value={insights.isLoading ? "…" : hasFollowers ? nf.format(totalFollowers) : "—"}
