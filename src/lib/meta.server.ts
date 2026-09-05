@@ -803,3 +803,118 @@ export async function fetchInsightsTimeseries(userId: string, days = 30) {
     })),
   };
 }
+
+export type PostMetric = {
+  id: string;
+  accountId: string;
+  username: string;
+  caption: string;
+  mediaType: string;
+  thumbnail: string | null;
+  permalink: string | null;
+  timestamp: string;
+  views: number | null;
+  likes: number | null;
+  shares: number | null;
+  comments: number | null;
+  reach: number | null;
+};
+
+/** Métricas por publicação (views, curtidas, compartilhamentos) dos últimos N dias. */
+export async function fetchPostsMetrics(userId: string, days = 30) {
+  const env = readMetaEnv();
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: accounts } = await supabaseAdmin
+    .from("instagram_accounts")
+    .select("id, username")
+    .eq("user_id", userId)
+    .eq("status", "connected");
+
+  const cutoff = Date.now() - days * 86400_000;
+  const posts: PostMetric[] = [];
+  const errors: string[] = [];
+
+  for (const acc of accounts ?? []) {
+    try {
+      const token = await tokenFor(acc.id, userId);
+      const res = await graph(
+        `https://graph.instagram.com/${env.graphVersion}/me/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count&limit=50&access_token=${encodeURIComponent(token)}`,
+      );
+      const media = (res["data"] as Record<string, unknown>[] | undefined) ?? [];
+      const recent = media.filter((m) => {
+        const ts = typeof m["timestamp"] === "string" ? Date.parse(m["timestamp"]) : NaN;
+        return Number.isFinite(ts) && ts >= cutoff;
+      });
+
+      for (const m of recent) {
+        const id = String(m["id"]);
+        let views: number | null = null;
+        let shares: number | null = null;
+        let reach: number | null = null;
+        try {
+          const ins = await graph(
+            `https://graph.instagram.com/${env.graphVersion}/${id}/insights?metric=views,shares,reach&access_token=${encodeURIComponent(token)}`,
+          );
+          for (const row of ((ins["data"] as Record<string, unknown>[] | undefined) ?? [])) {
+            const name = String(row["name"] ?? "");
+            const values = (row["values"] as { value?: number }[] | undefined) ?? [];
+            const value = typeof values[0]?.value === "number" ? values[0]!.value! : null;
+            if (name === "views") views = value;
+            if (name === "shares") shares = value;
+            if (name === "reach") reach = value;
+          }
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "Insights indisponíveis.";
+          if (!errors.includes(msg)) errors.push(msg);
+        }
+
+        posts.push({
+          id,
+          accountId: acc.id,
+          username: acc.username,
+          caption: typeof m["caption"] === "string" ? (m["caption"] as string) : "",
+          mediaType: String(m["media_type"] ?? "IMAGE"),
+          thumbnail: (m["thumbnail_url"] as string) ?? (m["media_url"] as string) ?? null,
+          permalink: (m["permalink"] as string) ?? null,
+          timestamp: String(m["timestamp"] ?? ""),
+          views,
+          likes: typeof m["like_count"] === "number" ? (m["like_count"] as number) : null,
+          shares,
+          comments: typeof m["comments_count"] === "number" ? (m["comments_count"] as number) : null,
+          reach,
+        });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Conta indisponível.";
+      if (!errors.includes(msg)) errors.push(msg);
+    }
+  }
+
+  posts.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+
+  const byDay = new Map<string, { views: number; likes: number; shares: number }>();
+  for (let i = days - 1; i >= 0; i--) {
+    const day = new Date(Date.now() - i * 86400_000).toISOString().slice(0, 10);
+    byDay.set(day, { views: 0, likes: 0, shares: 0 });
+  }
+  for (const p of posts) {
+    const day = p.timestamp.slice(0, 10);
+    const bucket = byDay.get(day);
+    if (!bucket) continue;
+    bucket.views += p.views ?? 0;
+    bucket.likes += p.likes ?? 0;
+    bucket.shares += p.shares ?? 0;
+  }
+
+  return {
+    posts,
+    series: Array.from(byDay.entries()).map(([day, v]) => ({ day, ...v })),
+    totals: {
+      views: posts.reduce((a, p) => a + (p.views ?? 0), 0),
+      likes: posts.reduce((a, p) => a + (p.likes ?? 0), 0),
+      shares: posts.reduce((a, p) => a + (p.shares ?? 0), 0),
+      comments: posts.reduce((a, p) => a + (p.comments ?? 0), 0),
+    },
+    errors,
+  };
+}
