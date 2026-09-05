@@ -86,14 +86,21 @@ function Dashboard() {
     followers: number | null;
     mediaCount: number | null;
     views: number | null;
+    views7d?: number | null;
+    views30d?: number | null;
     error?: string;
   };
   const rows: InsightRow[] = (insights.data as InsightRow[] | undefined) ?? [];
   const totalViews = rows.reduce((a, r) => a + (r.views ?? 0), 0);
+  const totalViews7d = rows.reduce((a, r) => a + (r.views7d ?? 0), 0);
+  const totalViews30d = rows.reduce((a, r) => a + (r.views30d ?? 0), 0);
   const totalFollowers = rows.reduce((a, r) => a + (r.followers ?? 0), 0);
   const hasViews = rows.some((r) => r.views !== null);
+  const has7d = rows.some((r) => (r.views7d ?? null) !== null);
+  const has30d = rows.some((r) => (r.views30d ?? null) !== null);
   const hasFollowers = rows.some((r) => r.followers !== null);
   const viewsError = rows.find((r) => r.views === null && r.error)?.error;
+
 
   return (
     <AppShell title="Painel" subtitle="Sua operação em um único fluxo">
