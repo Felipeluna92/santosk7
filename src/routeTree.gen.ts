@@ -21,6 +21,7 @@ import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated/historico'
 import { Route as AuthenticatedLogsRouteImport } from './routes/_authenticated/logs'
 import { Route as AuthenticatedMetricasRouteImport } from './routes/_authenticated/metricas'
+import { Route as AuthenticatedPublicacoesRouteImport } from './routes/_authenticated/publicacoes'
 import { Route as AuthenticatedSaudeRouteImport } from './routes/_authenticated/saude'
 import { Route as ApiPublicHooksMonitorAccountsRouteImport } from './routes/api/public/hooks/monitor-accounts'
 import { Route as ApiPublicHooksPublishScheduledRouteImport } from './routes/api/public/hooks/publish-scheduled'
@@ -88,6 +89,12 @@ const AuthenticatedMetricasRoute = AuthenticatedMetricasRouteImport.update({
   path: '/metricas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPublicacoesRoute =
+  AuthenticatedPublicacoesRouteImport.update({
+    id: '/publicacoes',
+    path: '/publicacoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSaudeRoute = AuthenticatedSaudeRouteImport.update({
   id: '/saude',
   path: '/saude',
@@ -135,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/historico': typeof AuthenticatedHistoricoRoute
   '/logs': typeof AuthenticatedLogsRoute
   '/metricas': typeof AuthenticatedMetricasRoute
+  '/publicacoes': typeof AuthenticatedPublicacoesRoute
   '/saude': typeof AuthenticatedSaudeRoute
   '/api/public/hooks/monitor-accounts': typeof ApiPublicHooksMonitorAccountsRoute
   '/api/public/hooks/publish-scheduled': typeof ApiPublicHooksPublishScheduledRoute
@@ -153,6 +161,7 @@ export interface FileRoutesByTo {
   '/historico': typeof AuthenticatedHistoricoRoute
   '/logs': typeof AuthenticatedLogsRoute
   '/metricas': typeof AuthenticatedMetricasRoute
+  '/publicacoes': typeof AuthenticatedPublicacoesRoute
   '/saude': typeof AuthenticatedSaudeRoute
   '/': typeof AuthenticatedIndexRoute
   '/api/public/hooks/monitor-accounts': typeof ApiPublicHooksMonitorAccountsRoute
@@ -174,6 +183,7 @@ export interface FileRoutesById {
   '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
   '/_authenticated/logs': typeof AuthenticatedLogsRoute
   '/_authenticated/metricas': typeof AuthenticatedMetricasRoute
+  '/_authenticated/publicacoes': typeof AuthenticatedPublicacoesRoute
   '/_authenticated/saude': typeof AuthenticatedSaudeRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/api/public/hooks/monitor-accounts': typeof ApiPublicHooksMonitorAccountsRoute
@@ -196,6 +206,7 @@ export interface FileRouteTypes {
     | '/historico'
     | '/logs'
     | '/metricas'
+    | '/publicacoes'
     | '/saude'
     | '/api/public/hooks/monitor-accounts'
     | '/api/public/hooks/publish-scheduled'
@@ -214,6 +225,7 @@ export interface FileRouteTypes {
     | '/historico'
     | '/logs'
     | '/metricas'
+    | '/publicacoes'
     | '/saude'
     | '/'
     | '/api/public/hooks/monitor-accounts'
@@ -234,6 +246,7 @@ export interface FileRouteTypes {
     | '/_authenticated/historico'
     | '/_authenticated/logs'
     | '/_authenticated/metricas'
+    | '/_authenticated/publicacoes'
     | '/_authenticated/saude'
     | '/_authenticated/'
     | '/api/public/hooks/monitor-accounts'
@@ -339,6 +352,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMetricasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/publicacoes': {
+      id: '/_authenticated/publicacoes'
+      path: '/publicacoes'
+      fullPath: '/publicacoes'
+      preLoaderRoute: typeof AuthenticatedPublicacoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/saude': {
       id: '/_authenticated/saude'
       path: '/saude'
@@ -394,6 +414,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
   AuthenticatedLogsRoute: typeof AuthenticatedLogsRoute
   AuthenticatedMetricasRoute: typeof AuthenticatedMetricasRoute
+  AuthenticatedPublicacoesRoute: typeof AuthenticatedPublicacoesRoute
   AuthenticatedSaudeRoute: typeof AuthenticatedSaudeRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
@@ -408,6 +429,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
   AuthenticatedLogsRoute: AuthenticatedLogsRoute,
   AuthenticatedMetricasRoute: AuthenticatedMetricasRoute,
+  AuthenticatedPublicacoesRoute: AuthenticatedPublicacoesRoute,
   AuthenticatedSaudeRoute: AuthenticatedSaudeRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }

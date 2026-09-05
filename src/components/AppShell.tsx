@@ -33,6 +33,7 @@ const NAV = [
   ] },
   { section: "Conteúdo", items: [
     { to: "/calendario", label: "Calendário", icon: CalendarDays },
+    { to: "/publicacoes", label: "Publicações", icon: Images },
     { to: "/biblioteca", label: "Biblioteca", icon: Images },
     { to: "/historico", label: "Histórico", icon: History },
   ] },
