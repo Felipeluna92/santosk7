@@ -121,7 +121,7 @@ export const getPostsMetrics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { days?: number } | undefined) => {
     const days = Number(input?.days ?? 30);
-    return { days: [7, 14, 30].includes(days) ? days : 30 };
+    return { days: [7, 14, 30, 90].includes(days) ? days : 30 };
   })
   .handler(async ({ data, context }) => {
     const { fetchPostsMetrics } = await import("./meta.server");
