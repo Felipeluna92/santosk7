@@ -500,15 +500,15 @@ export async function publishPostById(postId: string, userId?: string) {
           media_type: "STORIES",
           ...(isVideo ? { video_url: url } : { image_url: url }),
         });
-        if (isVideo) {
-          await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
-          await waitForContainer(containerId, token, env.graphVersion);
-        }
+        await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
+        await waitForContainer(containerId, token, env.graphVersion);
       } else {
         containerId = await createContainer(igId, token, env.graphVersion, {
           image_url: url,
           caption,
         });
+        await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
+        await waitForContainer(containerId, token, env.graphVersion);
       }
     }
 
