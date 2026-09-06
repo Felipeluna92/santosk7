@@ -12,11 +12,13 @@ import {
   burnImageOverlay,
   burnVideoOverlay,
   canBurnVideoOverlay,
+  linkLabel,
   newOverlayItem,
   validateStoryFile,
   type Overlay,
   type OverlayItem,
 } from "@/lib/overlay";
+
 
 type Props = {
   kind: "image" | "video";
