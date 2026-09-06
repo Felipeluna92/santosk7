@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Upload, X, Loader2, Info, Type, Plus, AtSign, Trash2 } from "lucide-react";
+import { Upload, X, Loader2, Info, Type, Plus, AtSign, Trash2, Link2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
