@@ -535,18 +535,20 @@ function Composer() {
                     Mesma legenda, hashtags, mídia e capa — uma cópia agendada para cada horário.
                   </p>
                   <div className="flex gap-2">
-                    <Select value={newTime} onValueChange={setNewTime}>
-                      <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="Horário (mesma data)" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-64">
-                        {TIME_SLOTS.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {s}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      type="time"
+                      step={60}
+                      list="sk7-time-slots"
+                      value={newTime}
+                      onChange={(e) => setNewTime(e.target.value)}
+                      className="bg-background"
+                    />
+                    <datalist id="sk7-time-slots">
+                      {TIME_SLOTS.map((s) => (
+                        <option key={s} value={s} />
+                      ))}
+                    </datalist>
+
                     <Button
                       type="button"
                       size="sm"
