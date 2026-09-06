@@ -52,12 +52,15 @@ export function linkLabel(item: OverlayItem) {
 
 
 export function hasOverlayContent(overlay: Overlay) {
-  return overlay.some((i) => i.text.trim().length > 0);
+  return overlay.some((i) => (i.kind === "link" ? linkLabel(i).length > 0 : i.text.trim().length > 0));
 }
 
 function drawItem(ctx: CanvasRenderingContext2D, w: number, h: number, o: OverlayItem) {
-  const lines = o.text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const source = o.kind === "link" ? linkLabel(o) : o.text;
+  const lines = source.split("\n").map((l) => l.trim()).filter(Boolean);
   if (!lines.length) return;
+  if (o.kind === "link") lines[0] = `🔗 ${lines[0]}`;
+
   const fontSize = Math.max(12, (o.sizePct / 100) * h);
   ctx.font = `600 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
   ctx.textAlign = "center";
