@@ -465,7 +465,7 @@ export async function publishPostById(postId: string, userId?: string) {
           is_carousel_item: "true",
           ...(isVideo ? { video_url: url, media_type: "VIDEO" } : { image_url: url }),
         });
-        if (isVideo) await waitForContainer(child, token, env.graphVersion);
+        await waitForContainer(child, token, env.graphVersion);
         children.push(child);
       }
       containerId = await createContainer(igId, token, env.graphVersion, {
