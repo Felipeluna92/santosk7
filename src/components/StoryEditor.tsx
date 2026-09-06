@@ -228,8 +228,11 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
                   }`}
                 >
                   <button type="button" onClick={() => setActiveId(item.id)} className="max-w-[120px] truncate">
-                    {item.text.trim() || (item.kind === "mention" ? "@..." : "Legenda")}
+                    {item.kind === "link"
+                      ? linkLabel(item) || "Link"
+                      : item.text.trim() || (item.kind === "mention" ? "@..." : "Legenda")}
                   </button>
+
                   <button type="button" onClick={() => removeItem(item.id)} aria-label="Remover camada">
                     <Trash2 className="h-3 w-3" />
                   </button>
