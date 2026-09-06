@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Upload, X, Loader2, Info, Type, Plus, AtSign, Trash2 } from "lucide-react";
+import { Upload, X, Loader2, Info, Type, Plus, AtSign, Trash2, Link2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,13 @@ import {
   burnImageOverlay,
   burnVideoOverlay,
   canBurnVideoOverlay,
+  linkLabel,
   newOverlayItem,
   validateStoryFile,
   type Overlay,
   type OverlayItem,
 } from "@/lib/overlay";
+
 
 type Props = {
   kind: "image" | "video";
@@ -164,7 +166,7 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
           )}
 
           {overlay
-            .filter((item) => item.text.trim())
+            .filter((item) => (item.kind === "link" ? linkLabel(item) : item.text.trim()))
             .map((item) => (
               <div
                 key={item.id}
@@ -193,10 +195,11 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
                   style={{ fontSize: `${(item.sizePct / 100) * 320}px` }}
                   className="block whitespace-pre-wrap"
                 >
-                  {item.text}
+                  {item.kind === "link" ? `🔗 ${linkLabel(item)}` : item.text}
                 </span>
               </div>
             ))}
+
         </div>
 
         <div className="space-y-2.5">
@@ -207,7 +210,11 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
             <Button type="button" size="sm" variant="secondary" onClick={() => addItem("mention")}>
               <AtSign className="h-4 w-4" /> Marcação
             </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => addItem("link")}>
+              <Link2 className="h-4 w-4" /> Figurinha de link
+            </Button>
           </div>
+
 
           {overlay.length ? (
             <div className="flex flex-wrap gap-1.5">
@@ -221,8 +228,11 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
                   }`}
                 >
                   <button type="button" onClick={() => setActiveId(item.id)} className="max-w-[120px] truncate">
-                    {item.text.trim() || (item.kind === "mention" ? "@..." : "Legenda")}
+                    {item.kind === "link"
+                      ? linkLabel(item) || "Link"
+                      : item.text.trim() || (item.kind === "mention" ? "@..." : "Legenda")}
                   </button>
+
                   <button type="button" onClick={() => removeItem(item.id)} aria-label="Remover camada">
                     <Trash2 className="h-3 w-3" />
                   </button>
@@ -239,7 +249,11 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
             <>
               <div className="space-y-1.5">
                 <Label className="text-xs">
-                  {active.kind === "mention" ? "Marcação visual (@usuário)" : "Texto da legenda"}
+                  {active.kind === "mention"
+                    ? "Marcação visual (@usuário)"
+                    : active.kind === "link"
+                      ? "Figurinha de link"
+                      : "Texto da legenda"}
                 </Label>
                 {active.kind === "mention" ? (
                   <Input
@@ -248,6 +262,25 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
                     placeholder="@usuario"
                     className="bg-background"
                   />
+                ) : active.kind === "link" ? (
+                  <div className="space-y-1.5">
+                    <Input
+                      value={active.url ?? ""}
+                      onChange={(e) => patchActive({ url: e.target.value.slice(0, 300) })}
+                      placeholder="https://seusite.com/promo"
+                      className="bg-background"
+                    />
+                    <Input
+                      value={active.text}
+                      onChange={(e) => patchActive({ text: e.target.value.slice(0, 40) })}
+                      placeholder="Texto da figurinha (ex.: Ver oferta)"
+                      className="bg-background"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      A figurinha é desenhada na mídia. Para o link ficar clicável, cole o endereço no
+                      Instagram ao publicar — a API oficial não cria figurinha de link.
+                    </p>
+                  </div>
                 ) : (
                   <Textarea
                     value={active.text}
@@ -258,6 +291,7 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
                   />
                 )}
               </div>
+
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">

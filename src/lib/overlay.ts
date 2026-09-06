@@ -1,8 +1,10 @@
 export type OverlayItem = {
   id: string;
-  /** "caption" = texto livre, "mention" = marcação @usuario */
-  kind: "caption" | "mention";
+  /** "caption" = texto livre, "mention" = marcação @usuario, "link" = figurinha de link */
+  kind: "caption" | "mention" | "link";
   text: string;
+  /** URL do destino, usada somente na figurinha de link */
+  url?: string;
   /** posição do centro do texto, em % da largura/altura da mídia */
   xPct: number;
   yPct: number;
@@ -18,26 +20,47 @@ export type Overlay = OverlayItem[];
 export const DEFAULT_OVERLAY: Overlay = [];
 
 export function newOverlayItem(kind: OverlayItem["kind"], index = 0): OverlayItem {
-  return {
+  const base = {
     id: `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     kind,
-    text: kind === "mention" ? "@usuario" : "",
     xPct: 50,
-    yPct: kind === "mention" ? Math.min(92, 78 + index * 7) : Math.max(12, 30 + index * 7),
-    sizePct: kind === "mention" ? 4 : 5,
     color: "#ffffff",
     background: "#000000",
     backgroundOn: true,
   };
+  if (kind === "link") {
+    return { ...base, text: "", url: "", yPct: Math.min(92, 70 + index * 8), sizePct: 3.6 };
+  }
+  if (kind === "mention") {
+    return { ...base, text: "@usuario", yPct: Math.min(92, 78 + index * 7), sizePct: 4 };
+  }
+  return { ...base, text: "", yPct: Math.max(12, 30 + index * 7), sizePct: 5 };
 }
 
+export function linkLabel(item: OverlayItem) {
+  const label = item.text.trim();
+  if (label) return label;
+  const raw = (item.url ?? "").trim();
+  if (!raw) return "";
+  try {
+    const u = new URL(raw.startsWith("http") ? raw : `https://${raw}`);
+    return (u.hostname + u.pathname).replace(/^www\./, "").replace(/\/$/, "");
+  } catch {
+    return raw;
+  }
+}
+
+
 export function hasOverlayContent(overlay: Overlay) {
-  return overlay.some((i) => i.text.trim().length > 0);
+  return overlay.some((i) => (i.kind === "link" ? linkLabel(i).length > 0 : i.text.trim().length > 0));
 }
 
 function drawItem(ctx: CanvasRenderingContext2D, w: number, h: number, o: OverlayItem) {
-  const lines = o.text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const source = o.kind === "link" ? linkLabel(o) : o.text;
+  const lines = source.split("\n").map((l) => l.trim()).filter(Boolean);
   if (!lines.length) return;
+  if (o.kind === "link") lines[0] = `🔗 ${lines[0]}`;
+
   const fontSize = Math.max(12, (o.sizePct / 100) * h);
   ctx.font = `600 ${fontSize}px "Space Grotesk", system-ui, sans-serif`;
   ctx.textAlign = "center";
