@@ -465,7 +465,7 @@ export async function publishPostById(postId: string, userId?: string) {
           is_carousel_item: "true",
           ...(isVideo ? { video_url: url, media_type: "VIDEO" } : { image_url: url }),
         });
-        if (isVideo) await waitForContainer(child, token, env.graphVersion);
+        await waitForContainer(child, token, env.graphVersion);
         children.push(child);
       }
       containerId = await createContainer(igId, token, env.graphVersion, {
@@ -473,6 +473,8 @@ export async function publishPostById(postId: string, userId?: string) {
         children: children.join(","),
         caption,
       });
+      await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
+      await waitForContainer(containerId, token, env.graphVersion);
     } else {
       const url = post.media_url ?? "";
       if (!isPublicHttpUrl(url))
@@ -498,25 +500,37 @@ export async function publishPostById(postId: string, userId?: string) {
           media_type: "STORIES",
           ...(isVideo ? { video_url: url } : { image_url: url }),
         });
-        if (isVideo) {
-          await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
-          await waitForContainer(containerId, token, env.graphVersion);
-        }
+        await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
+        await waitForContainer(containerId, token, env.graphVersion);
       } else {
         containerId = await createContainer(igId, token, env.graphVersion, {
           image_url: url,
           caption,
         });
+        await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
+        await waitForContainer(containerId, token, env.graphVersion);
       }
     }
 
     await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
 
-    const published = await graph(`https://graph.instagram.com/${env.graphVersion}/${igId}/media_publish`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ creation_id: containerId, access_token: token }),
-    });
+    let published: Record<string, unknown> | null = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        published = await graph(`https://graph.instagram.com/${env.graphVersion}/${igId}/media_publish`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ creation_id: containerId, access_token: token }),
+        });
+        break;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        const notReady = /not ready|not available|processing/i.test(message);
+        if (!notReady || attempt === 3) throw e;
+        await new Promise((r) => setTimeout(r, 4000 * (attempt + 1)));
+      }
+    }
+    if (!published) throw new Error("Falha ao publicar a mídia.");
 
     const mediaId = String(published["id"] ?? "");
     await supabaseAdmin
