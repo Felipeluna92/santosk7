@@ -210,7 +210,11 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
             <Button type="button" size="sm" variant="secondary" onClick={() => addItem("mention")}>
               <AtSign className="h-4 w-4" /> Marcação
             </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => addItem("link")}>
+              <Link2 className="h-4 w-4" /> Figurinha de link
+            </Button>
           </div>
+
 
           {overlay.length ? (
             <div className="flex flex-wrap gap-1.5">
