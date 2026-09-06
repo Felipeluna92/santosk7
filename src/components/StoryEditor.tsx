@@ -249,7 +249,11 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
             <>
               <div className="space-y-1.5">
                 <Label className="text-xs">
-                  {active.kind === "mention" ? "Marcação visual (@usuário)" : "Texto da legenda"}
+                  {active.kind === "mention"
+                    ? "Marcação visual (@usuário)"
+                    : active.kind === "link"
+                      ? "Figurinha de link"
+                      : "Texto da legenda"}
                 </Label>
                 {active.kind === "mention" ? (
                   <Input
@@ -258,6 +262,25 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
                     placeholder="@usuario"
                     className="bg-background"
                   />
+                ) : active.kind === "link" ? (
+                  <div className="space-y-1.5">
+                    <Input
+                      value={active.url ?? ""}
+                      onChange={(e) => patchActive({ url: e.target.value.slice(0, 300) })}
+                      placeholder="https://seusite.com/promo"
+                      className="bg-background"
+                    />
+                    <Input
+                      value={active.text}
+                      onChange={(e) => patchActive({ text: e.target.value.slice(0, 40) })}
+                      placeholder="Texto da figurinha (ex.: Ver oferta)"
+                      className="bg-background"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      A figurinha é desenhada na mídia. Para o link ficar clicável, cole o endereço no
+                      Instagram ao publicar — a API oficial não cria figurinha de link.
+                    </p>
+                  </div>
                 ) : (
                   <Textarea
                     value={active.text}
@@ -268,6 +291,7 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
                   />
                 )}
               </div>
+
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
