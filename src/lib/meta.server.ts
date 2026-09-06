@@ -473,6 +473,8 @@ export async function publishPostById(postId: string, userId?: string) {
         children: children.join(","),
         caption,
       });
+      await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
+      await waitForContainer(containerId, token, env.graphVersion);
     } else {
       const url = post.media_url ?? "";
       if (!isPublicHttpUrl(url))
