@@ -164,7 +164,7 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
           )}
 
           {overlay
-            .filter((item) => item.text.trim())
+            .filter((item) => (item.kind === "link" ? linkLabel(item) : item.text.trim()))
             .map((item) => (
               <div
                 key={item.id}
@@ -193,10 +193,11 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
                   style={{ fontSize: `${(item.sizePct / 100) * 320}px` }}
                   className="block whitespace-pre-wrap"
                 >
-                  {item.text}
+                  {item.kind === "link" ? `🔗 ${linkLabel(item)}` : item.text}
                 </span>
               </div>
             ))}
+
         </div>
 
         <div className="space-y-2.5">
