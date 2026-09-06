@@ -511,19 +511,16 @@ function Composer() {
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">Horário</Label>
-                      <Select value={schedTime} onValueChange={setSchedTime}>
-                        <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-64">
-                          {TIME_SLOTS.map((s) => (
-                            <SelectItem key={s} value={s}>
-                              {s}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        type="time"
+                        step={60}
+                        list="sk7-time-slots"
+                        value={schedTime}
+                        onChange={(e) => setSchedTime(e.target.value)}
+                        className="bg-background"
+                      />
                     </div>
+
                   </div>
                 </div>
 
