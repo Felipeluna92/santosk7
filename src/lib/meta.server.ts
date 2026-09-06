@@ -514,11 +514,23 @@ export async function publishPostById(postId: string, userId?: string) {
 
     await supabaseAdmin.from("posts").update({ meta_container_id: containerId }).eq("id", postId);
 
-    const published = await graph(`https://graph.instagram.com/${env.graphVersion}/${igId}/media_publish`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ creation_id: containerId, access_token: token }),
-    });
+    let published: Record<string, unknown> | null = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        published = await graph(`https://graph.instagram.com/${env.graphVersion}/${igId}/media_publish`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ creation_id: containerId, access_token: token }),
+        });
+        break;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        const notReady = /not ready|not available|processing/i.test(message);
+        if (!notReady || attempt === 3) throw e;
+        await new Promise((r) => setTimeout(r, 4000 * (attempt + 1)));
+      }
+    }
+    if (!published) throw new Error("Falha ao publicar a mídia.");
 
     const mediaId = String(published["id"] ?? "");
     await supabaseAdmin
