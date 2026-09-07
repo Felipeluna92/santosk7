@@ -5,7 +5,37 @@ import { writeLog } from "./meta.server";
 
 const THREADS_API = "https://graph.threads.net/v1.0";
 
-export const THREADS_SCOPES = ["threads_basic", "threads_content_publish"];
+export const THREADS_SCOPES = ["threads_basic", "threads_content_publish", "threads_manage_insights"];
+
+/** URL de callback oficial de produção do Threads. Cadastre IGUAL no painel da Meta. */
+export const THREADS_PRODUCTION_REDIRECT_URI =
+  "https://santosk7.lovable.app/api/public/oauth/threads/callback";
+
+export type ThreadsEnv = {
+  appId: string | null;
+  appSecret: string | null;
+  redirectUri: string;
+};
+
+export function readThreadsEnv(): ThreadsEnv {
+  return {
+    appId: process.env["THREADS_APP_ID"] ?? null,
+    appSecret: process.env["THREADS_APP_SECRET"] ?? null,
+    redirectUri: process.env["THREADS_REDIRECT_URI"] ?? THREADS_PRODUCTION_REDIRECT_URI,
+  };
+}
+
+export function buildThreadsAuthorizationUrl(env: ThreadsEnv, state: string) {
+  const params = new URLSearchParams({
+    client_id: env.appId!,
+    redirect_uri: env.redirectUri,
+    response_type: "code",
+    scope: THREADS_SCOPES.join(","),
+    state,
+  });
+  console.info("[threads-oauth] authorize redirect_uri:", env.redirectUri);
+  return `https://threads.net/oauth/authorize?${params.toString()}`;
+}
 
 function humanizeThreadsError(payload: unknown): string {
   const err = (payload as { error?: { message?: string; code?: number; error_user_msg?: string } })?.error;
