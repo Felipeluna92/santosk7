@@ -35,6 +35,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { accountsQuery, postsQuery, POST_STATUS, fmtDate } from "@/lib/data";
 import { publishPost } from "@/lib/meta.functions";
 import { MediaUpload } from "@/components/MediaUpload";
+import { MediaPicker } from "@/components/MediaPicker";
+import { CaptionPicker } from "@/components/CaptionPicker";
 import { StoryEditor } from "@/components/StoryEditor";
 
 export const Route = createFileRoute("/_authenticated/composer")({
@@ -93,6 +95,7 @@ function Composer() {
   const [coverUrl, setCoverUrl] = useState("");
   const [storyKind, setStoryKind] = useState<"image" | "video">("image");
   const [caption, setCaption] = useState("");
+  const [captionVariants, setCaptionVariants] = useState<string[]>([]);
   const [hashtags, setHashtags] = useState("");
   const [schedDate, setSchedDate] = useState("");
   const [schedTime, setSchedTime] = useState("");
@@ -181,11 +184,14 @@ function Composer() {
     return null;
   })();
 
-  const payload = (accId: string | null, when?: string | null) => ({
+  const captionPool = captionVariants.length ? captionVariants : [caption];
+  const captionAt = (i: number) => captionPool[i % captionPool.length] ?? caption;
+
+  const payload = (accId: string | null, when?: string | null, captionText?: string) => ({
     account_id: accId,
     platform,
     type: isThreads ? "POST" : type,
-    caption: !isThreads && type === "STORY" ? null : caption || null,
+    caption: !isThreads && type === "STORY" ? null : (captionText ?? caption) || null,
     hashtags: !isThreads && type === "STORY" ? null : hashtags || null,
     media_url: !isThreads && type === "CAROUSEL" ? null : mediaUrl || null,
     cover_url: !isThreads && type === "REEL" ? coverUrl || null : null,
@@ -193,10 +199,10 @@ function Composer() {
     scheduled_at: when ? new Date(when).toISOString() : null,
   });
 
-  const savePost = async (status: string, accId: string | null, when?: string | null) => {
+  const savePost = async (status: string, accId: string | null, when?: string | null, captionText?: string) => {
     const { data, error } = await supabase
       .from("posts")
-      .insert({ ...payload(accId, when ?? null), status })
+      .insert({ ...payload(accId, when ?? null, captionText), status })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
@@ -207,7 +213,11 @@ function Composer() {
 
   const draftMutation = useMutation({
     mutationFn: async () => {
-      for (const acc of targetAccounts()) await savePost("draft", acc, scheduledAt || null);
+      let i = 0;
+      for (const acc of targetAccounts()) {
+        await savePost("draft", acc, scheduledAt || null, captionAt(i));
+        i++;
+      }
       return targetAccounts().length;
     },
     onSuccess: (n) => {
@@ -229,7 +239,7 @@ function Composer() {
       let n = 0;
       for (const t of allTimes)
         for (const acc of accountIds) {
-          await savePost("scheduled", acc, t);
+          await savePost("scheduled", acc, t, captionAt(n));
           n++;
         }
       return n;
@@ -246,9 +256,11 @@ function Composer() {
     mutationFn: async () => {
       if (capabilityError) throw new Error(capabilityError);
       if (mediaError) throw new Error(mediaError);
+      let i = 0;
       for (const acc of accountIds) {
-        const id = await savePost("draft", acc, null);
+        const id = await savePost("draft", acc, null, captionAt(i));
         await publishPost({ data: { postId: id } });
+        i++;
       }
       return accountIds.length;
     },
@@ -258,6 +270,7 @@ function Composer() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const busy = draftMutation.isPending || scheduleMutation.isPending || publishMutation.isPending;
 
@@ -417,15 +430,31 @@ function Composer() {
                 </div>
 
                 {t === "STORY" ? (
-                  <StoryEditor
-                    kind={storyKind}
-                    onKindChange={setStoryKind}
-                    value={mediaUrl}
-                    onChange={setMediaUrl}
-                  />
+                  <div className="space-y-2">
+                    <MediaPicker
+                      kind={storyKind === "video" ? "VIDEO" : "IMAGE"}
+                      label="Escolher da biblioteca"
+                      onSelect={(urls) => urls[0] && setMediaUrl(urls[0])}
+                    />
+                    <StoryEditor
+                      kind={storyKind}
+                      onKindChange={setStoryKind}
+                      value={mediaUrl}
+                      onChange={setMediaUrl}
+                    />
+                  </div>
                 ) : t === "CAROUSEL" ? (
                   <div className="space-y-1.5">
-                    <Label className="text-xs">URLs do carrossel (uma por linha, 2 a 10)</Label>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Label className="text-xs">URLs do carrossel (uma por linha, 2 a 10)</Label>
+                      <MediaPicker
+                        multiple
+                        label="Escolher da biblioteca"
+                        onSelect={(urls) =>
+                          setCarousel((prev) => [...prev.split("\n").filter(Boolean), ...urls].join("\n"))
+                        }
+                      />
+                    </div>
                     <Textarea
                       rows={5}
                       value={carousel}
@@ -449,6 +478,11 @@ function Composer() {
                             : "JPG ou PNG, até 8 MB. Gera uma URL pública HTTPS automaticamente."
                       }
                     />
+                    <MediaPicker
+                      kind={t === "REEL" ? "VIDEO" : "IMAGE"}
+                      label="Escolher da biblioteca"
+                      onSelect={(urls) => urls[0] && setMediaUrl(urls[0])}
+                    />
                     {t === "REEL" ? (
                       <MediaUpload
                         label="Capa do Reel"
@@ -471,6 +505,7 @@ function Composer() {
                   </div>
                 )}
 
+
                 <p className="flex gap-1.5 rounded-md bg-secondary/60 p-2.5 text-[11px] text-muted-foreground">
                   <Info className="mt-px h-3.5 w-3.5 shrink-0" />
                   Arquivos enviados aqui ficam no armazenamento do app e recebem uma URL HTTPS pública e
@@ -479,7 +514,18 @@ function Composer() {
                 </p>
 
                 <div className={`space-y-1.5 ${t === "STORY" ? "hidden" : ""}`}>
-                  <Label className="text-xs">Legenda</Label>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Label className="text-xs">Legenda</Label>
+                    <CaptionPicker
+                      current={caption}
+                      onUse={setCaption}
+                      onUseMany={(texts) => {
+                        setCaptionVariants(texts);
+                        if (texts[0]) setCaption(texts[0]);
+                        toast.success(`${texts.length} variações de legenda ativas.`);
+                      }}
+                    />
+                  </div>
                   <Textarea
                     rows={4}
                     value={caption}
@@ -487,7 +533,58 @@ function Composer() {
                     placeholder="Escreva a legenda..."
                     className="bg-background"
                   />
+                  <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Label className="text-xs">Variações de legenda</Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={() => {
+                          if (!caption.trim()) {
+                            toast.error("Escreva uma legenda para adicionar como variação.");
+                            return;
+                          }
+                          setCaptionVariants((prev) =>
+                            prev.includes(caption.trim()) ? prev : [...prev, caption.trim()],
+                          );
+                        }}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Adicionar a atual
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Com várias legendas, cada post criado recebe uma delas em rodízio (contas e horários).
+                    </p>
+                    {captionVariants.length ? (
+                      <div className="space-y-1.5">
+                        {captionVariants.map((v, i) => (
+                          <div
+                            key={`${v}-${i}`}
+                            className="flex items-start gap-2 rounded-md bg-secondary/60 px-2.5 py-1.5 text-[11px]"
+                          >
+                            <span className="shrink-0 font-semibold text-muted-foreground">{i + 1}.</span>
+                            <span className="min-w-0 flex-1 line-clamp-2 whitespace-pre-wrap">{v}</span>
+                            <button
+                              type="button"
+                              aria-label="Remover variação"
+                              className="text-muted-foreground hover:text-foreground"
+                              onClick={() => setCaptionVariants((prev) => prev.filter((_, x) => x !== i))}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground">
+                        Nenhuma variação — todos os posts usam a legenda acima.
+                      </p>
+                    )}
+                  </div>
                 </div>
+
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className={`space-y-1.5 ${t === "STORY" ? "hidden" : ""}`}>

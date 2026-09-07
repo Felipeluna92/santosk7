@@ -149,6 +149,33 @@ export type Database = {
         }
         Relationships: []
       }
+      caption_templates: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          title: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ig_media: {
         Row: {
           account_id: string
@@ -325,10 +352,32 @@ export type Database = {
         }
         Relationships: []
       }
+      media_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       media_items: {
         Row: {
           created_at: string
           favorite: boolean
+          folder_id: string | null
           id: string
           media_type: string
           public_url: string
@@ -340,6 +389,7 @@ export type Database = {
         Insert: {
           created_at?: string
           favorite?: boolean
+          folder_id?: string | null
           id?: string
           media_type?: string
           public_url: string
@@ -351,6 +401,7 @@ export type Database = {
         Update: {
           created_at?: string
           favorite?: boolean
+          folder_id?: string | null
           id?: string
           media_type?: string
           public_url?: string
@@ -359,7 +410,15 @@ export type Database = {
           title?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "media_items_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "media_folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       media_snapshots: {
         Row: {
