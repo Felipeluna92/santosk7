@@ -430,15 +430,31 @@ function Composer() {
                 </div>
 
                 {t === "STORY" ? (
-                  <StoryEditor
-                    kind={storyKind}
-                    onKindChange={setStoryKind}
-                    value={mediaUrl}
-                    onChange={setMediaUrl}
-                  />
+                  <div className="space-y-2">
+                    <MediaPicker
+                      kind={storyKind === "video" ? "VIDEO" : "IMAGE"}
+                      label="Escolher da biblioteca"
+                      onSelect={(urls) => urls[0] && setMediaUrl(urls[0])}
+                    />
+                    <StoryEditor
+                      kind={storyKind}
+                      onKindChange={setStoryKind}
+                      value={mediaUrl}
+                      onChange={setMediaUrl}
+                    />
+                  </div>
                 ) : t === "CAROUSEL" ? (
                   <div className="space-y-1.5">
-                    <Label className="text-xs">URLs do carrossel (uma por linha, 2 a 10)</Label>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Label className="text-xs">URLs do carrossel (uma por linha, 2 a 10)</Label>
+                      <MediaPicker
+                        multiple
+                        label="Escolher da biblioteca"
+                        onSelect={(urls) =>
+                          setCarousel((prev) => [...prev.split("\n").filter(Boolean), ...urls].join("\n"))
+                        }
+                      />
+                    </div>
                     <Textarea
                       rows={5}
                       value={carousel}
@@ -462,6 +478,11 @@ function Composer() {
                             : "JPG ou PNG, até 8 MB. Gera uma URL pública HTTPS automaticamente."
                       }
                     />
+                    <MediaPicker
+                      kind={t === "REEL" ? "VIDEO" : "IMAGE"}
+                      label="Escolher da biblioteca"
+                      onSelect={(urls) => urls[0] && setMediaUrl(urls[0])}
+                    />
                     {t === "REEL" ? (
                       <MediaUpload
                         label="Capa do Reel"
@@ -483,6 +504,7 @@ function Composer() {
                     </div>
                   </div>
                 )}
+
 
                 <p className="flex gap-1.5 rounded-md bg-secondary/60 p-2.5 text-[11px] text-muted-foreground">
                   <Info className="mt-px h-3.5 w-3.5 shrink-0" />
