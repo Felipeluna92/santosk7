@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { accountsQuery, postsQuery, fmtDate, POST_STATUS, POST_TYPE_LABEL } from "@/lib/data";
 import { demoAccounts, demoPosts } from "@/lib/demo";
 import { getAccountsInsights } from "@/lib/meta.functions";
+import { getThreadsAccountsInsights } from "@/lib/threads.functions";
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
@@ -65,6 +66,14 @@ function Dashboard() {
     refetchOnWindowFocus: true,
   });
 
+  const threadsInsights = useQuery({
+    queryKey: ["threads-accounts-insights"],
+    queryFn: () => getThreadsAccountsInsights(),
+    staleTime: 0,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+
   const loading = accounts.isLoading || posts.isLoading;
   const isDemo = !loading && (accounts.data?.length ?? 0) === 0;
 
@@ -101,6 +110,24 @@ function Dashboard() {
   const hasFollowers = rows.some((r) => r.followers !== null);
   const viewsError = rows.find((r) => r.views === null && r.error)?.error;
 
+  type ThreadsRow = {
+    accountId: string;
+    username: string;
+    followers: number | null;
+    views: number | null;
+    views7d: number | null;
+    views30d: number | null;
+    error?: string;
+  };
+  const tRows: ThreadsRow[] = (threadsInsights.data as ThreadsRow[] | undefined) ?? [];
+  const tViews = tRows.reduce((a, r) => a + (r.views ?? 0), 0);
+  const tViews7d = tRows.reduce((a, r) => a + (r.views7d ?? 0), 0);
+  const tViews30d = tRows.reduce((a, r) => a + (r.views30d ?? 0), 0);
+  const tFollowers = tRows.reduce((a, r) => a + (r.followers ?? 0), 0);
+  const tHasViews = tRows.some((r) => r.views !== null);
+  const tHasFollowers = tRows.some((r) => r.followers !== null);
+  const tError = tRows.find((r) => r.views === null && r.error)?.error;
+
 
   return (
     <AppShell title="Painel" subtitle="Sua operação em um único fluxo">
@@ -132,7 +159,7 @@ function Dashboard() {
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
-            label="Views (24h)"
+            label="Views Instagram (24h)"
             value={insights.isLoading ? "…" : hasViews ? nf.format(totalViews) : "—"}
             hint={
               hasViews || has7d || has30d
@@ -143,7 +170,7 @@ function Dashboard() {
           />
 
           <MetricCard
-            label="Seguidores"
+            label="Seguidores Instagram"
             value={insights.isLoading ? "…" : hasFollowers ? nf.format(totalFollowers) : "—"}
             hint={`${rows.length || accountList.length} conta(s) monitorada(s)`}
             icon={Users}
@@ -162,6 +189,30 @@ function Dashboard() {
           />
         </div>
       )}
+
+      {tRows.length > 0 ? (
+        <section className="mt-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Threads</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricCard
+              label="Views Threads (24h)"
+              value={threadsInsights.isLoading ? "…" : tHasViews ? nf.format(tViews) : "—"}
+              hint={
+                tHasViews
+                  ? `7 dias: ${nf.format(tViews7d)} · 30 dias: ${nf.format(tViews30d)}`
+                  : tError ?? "Sem métricas liberadas no Threads"
+              }
+              icon={Eye}
+            />
+            <MetricCard
+              label="Seguidores Threads"
+              value={threadsInsights.isLoading ? "…" : tHasFollowers ? nf.format(tFollowers) : "—"}
+              hint={`${tRows.length} conta(s) no Threads`}
+              icon={Users}
+            />
+          </div>
+        </section>
+      ) : null}
 
       <InsightsChart />
 
