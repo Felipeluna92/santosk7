@@ -93,6 +93,7 @@ function Composer() {
   const [coverUrl, setCoverUrl] = useState("");
   const [storyKind, setStoryKind] = useState<"image" | "video">("image");
   const [caption, setCaption] = useState("");
+  const [captionVariants, setCaptionVariants] = useState<string[]>([]);
   const [hashtags, setHashtags] = useState("");
   const [schedDate, setSchedDate] = useState("");
   const [schedTime, setSchedTime] = useState("");
