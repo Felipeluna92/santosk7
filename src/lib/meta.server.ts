@@ -270,7 +270,7 @@ export async function connectWithAccessToken(rawToken: string, userId: string) {
   return { id: account.id, username: account.username };
 }
 
-async function tokenFor(accountId: string, userId: string) {
+export async function tokenFor(accountId: string, userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("account_tokens")
@@ -646,6 +646,7 @@ export async function fetchAccountsInsights(userId: string) {
     .from("instagram_accounts")
     .select("id, username")
     .eq("user_id", userId)
+    .eq("platform", "instagram")
     .eq("status", "connected");
 
   const results: {
@@ -713,6 +714,7 @@ export async function fetchInsightsTimeseries(userId: string, days = 30) {
     .from("instagram_accounts")
     .select("id, username")
     .eq("user_id", userId)
+    .eq("platform", "instagram")
     .eq("status", "connected");
 
   const now = Math.floor(Date.now() / 1000);
@@ -846,6 +848,7 @@ export async function fetchPostsMetrics(userId: string, days = 30) {
     .from("instagram_accounts")
     .select("id, username")
     .eq("user_id", userId)
+    .eq("platform", "instagram")
     .eq("status", "connected");
 
   const cutoff = Date.now() - days * 86400_000;
