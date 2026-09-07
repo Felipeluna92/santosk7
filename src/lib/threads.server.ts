@@ -57,29 +57,13 @@ async function threads(url: string, init?: RequestInit) {
   return json;
 }
 
-/** Conecta uma conta do Threads validando o token contra a API oficial. */
-export async function connectThreadsWithToken(rawToken: string, userId: string) {
-  const input = rawToken.trim();
-  if (input.length < 20) throw new Error("Token inválido. Cole o token de acesso completo do Threads.");
-
-  let token = input;
-  let expiresIn: number | null = null;
-  const appSecret = process.env["META_APP_SECRET"];
-
-  if (appSecret) {
-    try {
-      const long = await threads(
-        `${THREADS_API.replace("/v1.0", "")}/access_token?grant_type=th_exchange_token&client_secret=${encodeURIComponent(
-          appSecret,
-        )}&access_token=${encodeURIComponent(token)}`,
-      );
-      if (long["access_token"]) token = String(long["access_token"]);
-      expiresIn = Number(long["expires_in"] ?? 0) || null;
-    } catch {
-      // Pode já ser um token de longa duração; segue com o informado.
-    }
-  }
-
+/** Salva (ou atualiza) a conta do Threads a partir de um token válido. */
+async function saveThreadsAccount(
+  token: string,
+  expiresIn: number | null,
+  userId: string,
+  scopes: string[] = THREADS_SCOPES,
+) {
   const me = await threads(
     `${THREADS_API}/me?fields=id,username,name,threads_profile_picture_url&access_token=${encodeURIComponent(token)}`,
   );
