@@ -1,7 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { Images, Star, Trash2, Plus, ExternalLink, Upload, Loader2 } from "lucide-react";
+import {
+  Images,
+  Star,
+  Trash2,
+  Plus,
+  ExternalLink,
+  Upload,
+  Loader2,
+  Folder as FolderIcon,
+  FolderPlus,
+  Pencil,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell, EmptyState } from "@/components/AppShell";
@@ -17,33 +28,44 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { mediaQuery } from "@/lib/data";
+import { foldersQuery, mediaQuery } from "@/lib/data";
 import { uploadLocalFile, validateFile } from "@/lib/uploads";
 
 export const Route = createFileRoute("/_authenticated/biblioteca")({
   head: () => ({
     meta: [
       { title: "Biblioteca — Instagram Studio Solo" },
-      { name: "description", content: "URLs públicas de mídia salvas, com tags e favoritos." },
+      { name: "description", content: "Pastas, mídias salvas com tags e favoritos para reutilizar ao publicar." },
       { property: "og:title", content: "Biblioteca — Instagram Studio Solo" },
-      { property: "og:description", content: "URLs públicas de mídia salvas, com tags e favoritos." },
+      {
+        property: "og:description",
+        content: "Pastas, mídias salvas com tags e favoritos para reutilizar ao publicar.",
+      },
     ],
   }),
   component: Biblioteca,
 });
 
+const NO_FOLDER = "__none__";
+
 function Biblioteca() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const media = useQuery(mediaQuery);
+  const folders = useQuery(foldersQuery);
 
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [type, setType] = useState("IMAGE");
   const [tags, setTags] = useState("");
+  const [folderId, setFolderId] = useState<string>(NO_FOLDER);
+  const [activeFolder, setActiveFolder] = useState<string>("all");
   const [onlyFav, setOnlyFav] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const invalidateMedia = () => qc.invalidateQueries({ queryKey: ["media"] });
+  const invalidateFolders = () => qc.invalidateQueries({ queryKey: ["media-folders"] });
 
   const handleFile = async (file: File) => {
     const kind = file.type.startsWith("video") ? "video" : "image";
@@ -67,6 +89,41 @@ function Biblioteca() {
     }
   };
 
+  const createFolder = useMutation({
+    mutationFn: async (name: string) => {
+      const { error } = await supabase.from("media_folders").insert({ name });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Pasta criada.");
+      invalidateFolders();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const renameFolder = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { error } = await supabase.from("media_folders").update({ name }).eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: invalidateFolders,
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteFolder = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("media_folders").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Pasta removida. As mídias continuam salvas.");
+      setActiveFolder("all");
+      invalidateFolders();
+      invalidateMedia();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const add = useMutation({
     mutationFn: async () => {
       if (!title.trim()) throw new Error("Dê um título para a mídia.");
@@ -79,6 +136,7 @@ function Biblioteca() {
         title: title.trim(),
         public_url: url.trim(),
         media_type: type,
+        folder_id: folderId === NO_FOLDER ? null : folderId,
         tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
       });
       if (error) throw new Error(error.message);
@@ -88,17 +146,18 @@ function Biblioteca() {
       setTitle("");
       setUrl("");
       setTags("");
-      qc.invalidateQueries({ queryKey: ["media"] });
+      invalidateMedia();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const toggleFav = useMutation({
-    mutationFn: async ({ id, favorite }: { id: string; favorite: boolean }) => {
-      const { error } = await supabase.from("media_items").update({ favorite }).eq("id", id);
+  const updateItem = useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: Record<string, unknown> }) => {
+      const { error } = await supabase.from("media_items").update(values).eq("id", id);
       if (error) throw new Error(error.message);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["media"] }),
+    onSuccess: invalidateMedia,
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const remove = useMutation({
@@ -108,20 +167,43 @@ function Biblioteca() {
     },
     onSuccess: () => {
       toast.success("Mídia removida.");
-      qc.invalidateQueries({ queryKey: ["media"] });
+      invalidateMedia();
     },
   });
 
-  const list = (media.data ?? []).filter((m) => (onlyFav ? m.favorite : true));
+  const list = (media.data ?? []).filter((m) => {
+    if (onlyFav && !m.favorite) return false;
+    if (activeFolder === "all") return true;
+    if (activeFolder === NO_FOLDER) return !m.folder_id;
+    return m.folder_id === activeFolder;
+  });
+
+  const folderTabs = [
+    { id: "all", name: "Todas" },
+    { id: NO_FOLDER, name: "Sem pasta" },
+    ...(folders.data ?? []).map((f) => ({ id: f.id, name: f.name })),
+  ];
 
   return (
     <AppShell
       title="Biblioteca"
-      subtitle="URLs públicas reutilizáveis na tela Publicar"
+      subtitle="Pastas e mídias reutilizáveis na tela Publicar"
       actions={
-        <Button size="sm" variant={onlyFav ? "default" : "secondary"} onClick={() => setOnlyFav((v) => !v)}>
-          <Star className="h-4 w-4" /> Favoritos
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              const name = window.prompt("Nome da nova pasta");
+              if (name?.trim()) createFolder.mutate(name.trim());
+            }}
+          >
+            <FolderPlus className="h-4 w-4" /> Nova pasta
+          </Button>
+          <Button size="sm" variant={onlyFav ? "default" : "secondary"} onClick={() => setOnlyFav((v) => !v)}>
+            <Star className="h-4 w-4" /> Favoritos
+          </Button>
+        </div>
       }
     >
       <input
@@ -134,6 +216,50 @@ function Biblioteca() {
           if (file) void handleFile(file);
         }}
       />
+
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {folderTabs.map((f) => {
+          const isCustom = f.id !== "all" && f.id !== NO_FOLDER;
+          return (
+            <span
+              key={f.id}
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] ${
+                activeFolder === f.id
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              <button type="button" className="inline-flex items-center gap-1" onClick={() => setActiveFolder(f.id)}>
+                <FolderIcon className="h-3 w-3" /> {f.name}
+              </button>
+              {isCustom ? (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Renomear pasta"
+                    className="hover:text-foreground"
+                    onClick={() => {
+                      const name = window.prompt("Novo nome da pasta", f.name);
+                      if (name?.trim()) renameFolder.mutate({ id: f.id, name: name.trim() });
+                    }}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Excluir pasta"
+                    className="hover:text-destructive"
+                    onClick={() => deleteFolder.mutate(f.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </>
+              ) : null}
+            </span>
+          );
+        })}
+      </div>
+
       <div className="panel mb-3 space-y-3 p-4">
         <button
           type="button"
@@ -144,41 +270,57 @@ function Biblioteca() {
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
           {uploading ? "Enviando arquivo..." : "Subir imagem ou vídeo do dispositivo (JPG, PNG, MP4 ou MOV)"}
         </button>
-        <div className="grid gap-3 md:grid-cols-[1.2fr_2fr_0.9fr_1.2fr_auto]">
-        <div className="space-y-1.5">
-          <Label className="text-xs">Título</Label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} className="bg-background" />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">URL pública</Label>
-          <Input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://cdn.exemplo.com/arquivo.jpg"
-            className="bg-background font-mono text-xs"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Tipo</Label>
-          <Select value={type} onValueChange={setType}>
-            <SelectTrigger className="bg-background">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="IMAGE">Imagem</SelectItem>
-              <SelectItem value="VIDEO">Vídeo</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Tags (vírgula)</Label>
-          <Input value={tags} onChange={(e) => setTags(e.target.value)} className="bg-background" />
-        </div>
-        <div className="flex items-end">
-          <Button size="sm" onClick={() => add.mutate()} disabled={add.isPending}>
-            <Plus className="h-4 w-4" /> Salvar
-          </Button>
-        </div>
+        <div className="grid gap-3 md:grid-cols-[1.2fr_2fr_0.9fr_1fr_1.2fr_auto]">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Título</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} className="bg-background" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">URL pública</Label>
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://cdn.exemplo.com/arquivo.jpg"
+              className="bg-background font-mono text-xs"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Tipo</Label>
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger className="bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="IMAGE">Imagem</SelectItem>
+                <SelectItem value="VIDEO">Vídeo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Pasta</Label>
+            <Select value={folderId} onValueChange={setFolderId}>
+              <SelectTrigger className="bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_FOLDER}>Sem pasta</SelectItem>
+                {(folders.data ?? []).map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Tags (vírgula)</Label>
+            <Input value={tags} onChange={(e) => setTags(e.target.value)} className="bg-background" />
+          </div>
+          <div className="flex items-end">
+            <Button size="sm" onClick={() => add.mutate()} disabled={add.isPending}>
+              <Plus className="h-4 w-4" /> Salvar
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -192,7 +334,7 @@ function Biblioteca() {
         <EmptyState
           icon={Images}
           title="Biblioteca vazia"
-          description="Salve URLs públicas de imagens e vídeos para reutilizar rapidamente na tela Publicar."
+          description="Suba arquivos ou salve URLs públicas para reutilizar rapidamente na tela Publicar."
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -208,14 +350,44 @@ function Biblioteca() {
               <div className="space-y-2 p-3">
                 <div className="flex items-start justify-between gap-2">
                   <p className="truncate text-[13px] font-medium">{m.title}</p>
-                  <button
-                    onClick={() => toggleFav.mutate({ id: m.id, favorite: !m.favorite })}
-                    className={m.favorite ? "text-warning" : "text-muted-foreground"}
-                    aria-label="Favoritar"
-                  >
-                    <Star className="h-3.5 w-3.5" fill={m.favorite ? "currentColor" : "none"} />
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => {
+                        const name = window.prompt("Novo nome da mídia", m.title);
+                        if (name?.trim()) updateItem.mutate({ id: m.id, values: { title: name.trim() } });
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label="Renomear mídia"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => updateItem.mutate({ id: m.id, values: { favorite: !m.favorite } })}
+                      className={m.favorite ? "text-warning" : "text-muted-foreground"}
+                      aria-label="Favoritar"
+                    >
+                      <Star className="h-3.5 w-3.5" fill={m.favorite ? "currentColor" : "none"} />
+                    </button>
+                  </div>
                 </div>
+                <Select
+                  value={m.folder_id ?? NO_FOLDER}
+                  onValueChange={(v) =>
+                    updateItem.mutate({ id: m.id, values: { folder_id: v === NO_FOLDER ? null : v } })
+                  }
+                >
+                  <SelectTrigger className="h-7 bg-background text-[11px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_FOLDER}>Sem pasta</SelectItem>
+                    {(folders.data ?? []).map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <div className="flex flex-wrap gap-1">
                   {(m.tags ?? []).map((t) => (
                     <span key={t} className="rounded bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
