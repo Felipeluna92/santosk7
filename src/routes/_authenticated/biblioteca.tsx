@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Images, Star, Trash2, Plus, ExternalLink } from "lucide-react";
+import { useRef, useState } from "react";
+import { Images, Star, Trash2, Plus, ExternalLink, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell, EmptyState } from "@/components/AppShell";
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { mediaQuery } from "@/lib/data";
+import { uploadLocalFile, validateFile } from "@/lib/uploads";
 
 export const Route = createFileRoute("/_authenticated/biblioteca")({
   head: () => ({
@@ -41,6 +42,30 @@ function Biblioteca() {
   const [type, setType] = useState("IMAGE");
   const [tags, setTags] = useState("");
   const [onlyFav, setOnlyFav] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File) => {
+    const kind = file.type.startsWith("video") ? "video" : "image";
+    const invalid = validateFile(file, kind);
+    if (invalid) {
+      toast.error(invalid);
+      return;
+    }
+    setUploading(true);
+    try {
+      const { url: publicUrl } = await uploadLocalFile(file, kind);
+      setUrl(publicUrl);
+      setType(kind === "video" ? "VIDEO" : "IMAGE");
+      if (!title.trim()) setTitle(file.name.replace(/\.[^.]+$/, ""));
+      toast.success("Arquivo enviado. Complete os dados e salve.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha no upload.");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   const add = useMutation({
     mutationFn: async () => {
@@ -99,7 +124,27 @@ function Biblioteca() {
         </Button>
       }
     >
-      <div className="panel mb-3 grid gap-3 p-4 md:grid-cols-[1.2fr_2fr_0.9fr_1.2fr_auto]">
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/jpeg,image/png,video/mp4,video/quicktime"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleFile(file);
+        }}
+      />
+      <div className="panel mb-3 space-y-3 p-4">
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => fileRef.current?.click()}
+          className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border bg-background px-3 py-4 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground disabled:opacity-60"
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {uploading ? "Enviando arquivo..." : "Subir imagem ou vídeo do dispositivo (JPG, PNG, MP4 ou MOV)"}
+        </button>
+        <div className="grid gap-3 md:grid-cols-[1.2fr_2fr_0.9fr_1.2fr_auto]">
         <div className="space-y-1.5">
           <Label className="text-xs">Título</Label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} className="bg-background" />
@@ -133,6 +178,7 @@ function Biblioteca() {
           <Button size="sm" onClick={() => add.mutate()} disabled={add.isPending}>
             <Plus className="h-4 w-4" /> Salvar
           </Button>
+        </div>
         </div>
       </div>
 
