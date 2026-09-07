@@ -166,17 +166,18 @@ function Composer() {
   })();
 
   const mediaError = (() => {
+    if (type === "CAROUSEL") {
+      const max = isThreads ? 20 : 10;
+      if (carouselUrls.length < 2) return "Um carrossel precisa de pelo menos 2 URLs públicas.";
+      if (carouselUrls.length > max) return `Máximo de ${max} mídias por carrossel.`;
+      if (carouselUrls.some((u) => !isPublicUrl(u))) return "Há URLs inválidas ou não públicas no carrossel.";
+      return null;
+    }
     if (isThreads) {
       if (!mediaUrl.trim() && !caption.trim() && !hashtags.trim())
         return "Escreva um texto ou anexe uma mídia para publicar no Threads.";
       if (mediaUrl.trim() && !isPublicUrl(mediaUrl))
         return "A URL precisa ser pública e acessível pelo Threads (http/https).";
-      return null;
-    }
-    if (type === "CAROUSEL") {
-      if (carouselUrls.length < 2) return "Um carrossel precisa de pelo menos 2 URLs públicas.";
-      if (carouselUrls.length > 10) return "Máximo de 10 mídias por carrossel.";
-      if (carouselUrls.some((u) => !isPublicUrl(u))) return "Há URLs inválidas ou não públicas no carrossel.";
       return null;
     }
     if (!mediaUrl.trim()) return "Informe a URL pública da mídia.";
@@ -190,14 +191,15 @@ function Composer() {
   const payload = (accId: string | null, when?: string | null, captionText?: string) => ({
     account_id: accId,
     platform,
-    type: isThreads ? "POST" : type,
+    type: isThreads ? (type === "CAROUSEL" ? "CAROUSEL" : "POST") : type,
     caption: !isThreads && type === "STORY" ? null : (captionText ?? caption) || null,
     hashtags: !isThreads && type === "STORY" ? null : hashtags || null,
-    media_url: !isThreads && type === "CAROUSEL" ? null : mediaUrl || null,
+    media_url: type === "CAROUSEL" ? null : mediaUrl || null,
     cover_url: !isThreads && type === "REEL" ? coverUrl || null : null,
-    carousel_urls: !isThreads && type === "CAROUSEL" ? carouselUrls : [],
+    carousel_urls: type === "CAROUSEL" ? carouselUrls : [],
     scheduled_at: when ? new Date(when).toISOString() : null,
   });
+
 
   const savePost = async (status: string, accId: string | null, when?: string | null, captionText?: string) => {
     const { data, error } = await supabase
@@ -288,7 +290,7 @@ function Composer() {
             onClick={() => {
               setPlatform(p.id);
               setAccountIds([]);
-              if (p.id === "threads") setType("POST");
+              if (p.id === "threads" && type !== "CAROUSEL") setType("POST");
             }}
             className={`rounded-md px-4 py-1.5 text-xs font-semibold transition-colors ${
               platform === p.id ? "bg-surface text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
@@ -301,24 +303,25 @@ function Composer() {
 
       <Tabs value={type} onValueChange={(v) => setType(v as typeof type)}>
         <TabsList
-          className={`grid w-full gap-1 bg-surface px-1 sm:inline-flex sm:w-auto ${isThreads ? "grid-cols-2" : "grid-cols-5"}`}
+          className={`grid w-full gap-1 bg-surface px-1 sm:inline-flex sm:w-auto ${isThreads ? "grid-cols-3" : "grid-cols-5"}`}
         >
           <TabsTrigger value="POST" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
             <ImageIcon className="mr-1 h-3.5 w-3.5 shrink-0" /> {isThreads ? "Thread" : "Post"}
           </TabsTrigger>
           {isThreads ? null : (
-            <>
-              <TabsTrigger value="REEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-                <Film className="mr-1 h-3.5 w-3.5 shrink-0" /> Reel
-              </TabsTrigger>
-              <TabsTrigger value="CAROUSEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-                <Layers className="mr-1 h-3.5 w-3.5 shrink-0" /> Carrossel
-              </TabsTrigger>
-              <TabsTrigger value="STORY" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-                <CircleDot className="mr-1 h-3.5 w-3.5 shrink-0" /> Story
-              </TabsTrigger>
-            </>
+            <TabsTrigger value="REEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+              <Film className="mr-1 h-3.5 w-3.5 shrink-0" /> Reel
+            </TabsTrigger>
           )}
+          <TabsTrigger value="CAROUSEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+            <Layers className="mr-1 h-3.5 w-3.5 shrink-0" /> Carrossel
+          </TabsTrigger>
+          {isThreads ? null : (
+            <TabsTrigger value="STORY" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
+              <CircleDot className="mr-1 h-3.5 w-3.5 shrink-0" /> Story
+            </TabsTrigger>
+          )}
+
           <TabsTrigger value="DRAFTS" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
             <FileText className="mr-1 h-3.5 w-3.5 shrink-0" /> Rascunhos
           </TabsTrigger>
@@ -446,7 +449,7 @@ function Composer() {
                 ) : t === "CAROUSEL" ? (
                   <div className="space-y-1.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <Label className="text-xs">URLs do carrossel (uma por linha, 2 a 10)</Label>
+                      <Label className="text-xs">URLs do carrossel (uma por linha, 2 a {isThreads ? 20 : 10})</Label>
                       <MediaPicker
                         multiple
                         label="Escolher da biblioteca"
