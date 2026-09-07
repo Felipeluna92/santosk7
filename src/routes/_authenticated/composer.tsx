@@ -490,7 +490,18 @@ function Composer() {
                 </p>
 
                 <div className={`space-y-1.5 ${t === "STORY" ? "hidden" : ""}`}>
-                  <Label className="text-xs">Legenda</Label>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Label className="text-xs">Legenda</Label>
+                    <CaptionPicker
+                      current={caption}
+                      onUse={setCaption}
+                      onUseMany={(texts) => {
+                        setCaptionVariants(texts);
+                        if (texts[0]) setCaption(texts[0]);
+                        toast.success(`${texts.length} variações de legenda ativas.`);
+                      }}
+                    />
+                  </div>
                   <Textarea
                     rows={4}
                     value={caption}
@@ -498,7 +509,58 @@ function Composer() {
                     placeholder="Escreva a legenda..."
                     className="bg-background"
                   />
+                  <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Label className="text-xs">Variações de legenda</Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={() => {
+                          if (!caption.trim()) {
+                            toast.error("Escreva uma legenda para adicionar como variação.");
+                            return;
+                          }
+                          setCaptionVariants((prev) =>
+                            prev.includes(caption.trim()) ? prev : [...prev, caption.trim()],
+                          );
+                        }}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Adicionar a atual
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Com várias legendas, cada post criado recebe uma delas em rodízio (contas e horários).
+                    </p>
+                    {captionVariants.length ? (
+                      <div className="space-y-1.5">
+                        {captionVariants.map((v, i) => (
+                          <div
+                            key={`${v}-${i}`}
+                            className="flex items-start gap-2 rounded-md bg-secondary/60 px-2.5 py-1.5 text-[11px]"
+                          >
+                            <span className="shrink-0 font-semibold text-muted-foreground">{i + 1}.</span>
+                            <span className="min-w-0 flex-1 line-clamp-2 whitespace-pre-wrap">{v}</span>
+                            <button
+                              type="button"
+                              aria-label="Remover variação"
+                              className="text-muted-foreground hover:text-foreground"
+                              onClick={() => setCaptionVariants((prev) => prev.filter((_, x) => x !== i))}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground">
+                        Nenhuma variação — todos os posts usam a legenda acima.
+                      </p>
+                    )}
+                  </div>
                 </div>
+
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className={`space-y-1.5 ${t === "STORY" ? "hidden" : ""}`}>
