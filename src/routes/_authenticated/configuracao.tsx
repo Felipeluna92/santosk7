@@ -94,6 +94,30 @@ function Configuracao() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const connectThreadsOAuth = useMutation({
+    mutationFn: async () => {
+      const popup = window.open("", "sk7-threads-oauth", "width=620,height=760,menubar=no,toolbar=no");
+      if (!popup) throw new Error("Permita pop-ups para conectar sua conta.");
+      try {
+        const state = randomState();
+        const result = await getThreadsAuthorizationUrl({ data: { state } });
+        if (!result.url) throw new Error(result.error || "A conexão com o Threads não está disponível agora.");
+        const expectedOrigin = result.callbackOrigin ? new URL(result.callbackOrigin).origin : window.location.origin;
+        const completion = waitForOAuth(popup, state, expectedOrigin, "Threads");
+        popup.location.href = result.url;
+        const code = await completion;
+        const saved = await completeThreadsConnection({ data: { code } });
+        await qc.invalidateQueries({ queryKey: ["accounts"] });
+        return saved.username;
+      } catch (error) {
+        popup.close();
+        throw error;
+      }
+    },
+    onSuccess: (username) => toast.success(`@${username} conectada no Threads.`),
+    onError: (e: Error) => toast.error(e.message || "Não foi possível concluir a conexão com o Threads."),
+  });
+
   const connect = useMutation({
     mutationFn: async () => {
       setErrorMessage("");
