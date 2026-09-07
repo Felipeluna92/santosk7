@@ -18,6 +18,7 @@ import { AppShell, EmptyState } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPostsMetrics } from "@/lib/meta.functions";
+import { getThreadsPostsMetrics } from "@/lib/threads.functions";
 
 export const Route = createFileRoute("/_authenticated/publicacoes")({
   head: () => ({
@@ -82,10 +83,12 @@ function interactions(p: Post) {
 function Publicacoes() {
   const [days, setDays] = useState<number>(30);
   const [sort, setSort] = useState<(typeof SORTS)[number]["key"]>("recent");
+  const [platform, setPlatform] = useState<"instagram" | "threads">("instagram");
 
   const q = useQuery({
-    queryKey: ["posts-metrics", days],
-    queryFn: () => getPostsMetrics({ data: { days } }),
+    queryKey: ["posts-metrics", platform, days],
+    queryFn: () =>
+      platform === "threads" ? getThreadsPostsMetrics({ data: { days } }) : getPostsMetrics({ data: { days } }),
     staleTime: 0,
     refetchInterval: 300_000,
     refetchOnWindowFocus: true,
