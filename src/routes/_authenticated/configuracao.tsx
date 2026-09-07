@@ -303,12 +303,12 @@ function Configuracao() {
                 onClick={() => connectThreads.mutate()}
               >
                 {connectThreads.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <AtSign className="h-4 w-4" />}
-                {threadsConnected ? "Reconectar Threads" : "Conectar Threads"}
+                Usar este token
               </Button>
-              <p className="flex items-center justify-center gap-1.5 pt-2 text-center text-[11px] text-muted-foreground">
-                <ShieldCheck className="h-3.5 w-3.5" /> Requer as permissões threads_basic e threads_content_publish.
-              </p>
-            </div>
+            </details>
+            <p className="flex items-center justify-center gap-1.5 pt-4 text-center text-[11px] text-muted-foreground">
+              <ShieldCheck className="h-3.5 w-3.5" /> Requer as permissões threads_basic e threads_content_publish.
+            </p>
           </div>
         </section>
       </main>
