@@ -258,3 +258,200 @@ export async function publishThreadsPost(post: ThreadsPost, threadsUserId: strin
 
   return { containerId, mediaId: String(published["id"] ?? ""), retry: false as const };
 }
+
+// ===================== Insights do Threads (separados do Instagram) =====================
+
+async function threadsAccounts(userId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("instagram_accounts")
+    .select("id, username, instagram_user_id")
+    .eq("user_id", userId)
+    .eq("platform", "threads")
+    .eq("status", "connected");
+  return data ?? [];
+}
+
+function metricValue(payload: Record<string, unknown>, name: string): number | null {
+  const rows = (payload["data"] as Record<string, unknown>[] | undefined) ?? [];
+  const row = rows.find((r) => String(r["name"] ?? "") === name);
+  if (!row) return null;
+  const total = (row["total_value"] as { value?: number } | undefined)?.value;
+  if (typeof total === "number") return total;
+  const values = (row["values"] as { value?: number }[] | undefined) ?? [];
+  const sum = values.reduce((a, v) => a + (typeof v.value === "number" ? v.value : 0), 0);
+  return values.length ? sum : null;
+}
+
+/** Resumo por conta do Threads: seguidores e views em 1, 7 e 30 dias. */
+export async function fetchThreadsAccountsInsights(userId: string) {
+  const { tokenFor } = await import("./meta.server");
+  const accounts = await threadsAccounts(userId);
+  const results: {
+    accountId: string;
+    username: string;
+    followers: number | null;
+    views: number | null;
+    views7d: number | null;
+    views30d: number | null;
+    error?: string;
+  }[] = [];
+
+  for (const acc of accounts) {
+    try {
+      const token = await tokenFor(acc.id, userId);
+      let error: string | undefined;
+      const windows = await Promise.all(
+        [1, 7, 30].map(async (d) => {
+          try {
+            const until = Math.floor(Date.now() / 1000);
+            const since = until - d * 86400;
+            const res = await threads(
+              `${THREADS_API}/me/threads_insights?metric=views&since=${since}&until=${until}&access_token=${encodeURIComponent(token)}`,
+            );
+            return metricValue(res, "views");
+          } catch (e) {
+            if (!error) error = e instanceof Error ? e.message : "Métrica indisponível no Threads.";
+            return null;
+          }
+        }),
+      );
+      let followers: number | null = null;
+      try {
+        const res = await threads(
+          `${THREADS_API}/me/threads_insights?metric=followers_count&access_token=${encodeURIComponent(token)}`,
+        );
+        followers = metricValue(res, "followers_count");
+      } catch {
+        // conta sem métrica de seguidores
+      }
+      results.push({
+        accountId: acc.id,
+        username: acc.username,
+        followers,
+        views: windows[0] ?? null,
+        views7d: windows[1] ?? null,
+        views30d: windows[2] ?? null,
+        ...(error ? { error } : {}),
+      });
+    } catch (e) {
+      results.push({
+        accountId: acc.id,
+        username: acc.username,
+        followers: null,
+        views: null,
+        views7d: null,
+        views30d: null,
+        error: e instanceof Error ? e.message : "Indisponível",
+      });
+    }
+  }
+  return results;
+}
+
+export type ThreadsPostMetric = {
+  id: string;
+  accountId: string;
+  username: string;
+  caption: string;
+  mediaType: string;
+  thumbnail: string | null;
+  permalink: string | null;
+  timestamp: string;
+  views: number | null;
+  likes: number | null;
+  shares: number | null;
+  comments: number | null;
+  reach: number | null;
+};
+
+/** Métricas por publicação do Threads nos últimos N dias. */
+export async function fetchThreadsPostsMetrics(userId: string, days = 30) {
+  const { tokenFor } = await import("./meta.server");
+  const accounts = await threadsAccounts(userId);
+  const cutoff = Date.now() - days * 86400_000;
+  const posts: ThreadsPostMetric[] = [];
+  const errors: string[] = [];
+
+  for (const acc of accounts) {
+    try {
+      const token = await tokenFor(acc.id, userId);
+      const res = await threads(
+        `${THREADS_API}/me/threads?fields=id,text,media_type,media_url,thumbnail_url,permalink,timestamp&limit=50&access_token=${encodeURIComponent(token)}`,
+      );
+      const media = (res["data"] as Record<string, unknown>[] | undefined) ?? [];
+      const recent = media.filter((m) => {
+        const ts = typeof m["timestamp"] === "string" ? Date.parse(m["timestamp"] as string) : NaN;
+        return Number.isFinite(ts) && ts >= cutoff;
+      });
+
+      for (const m of recent) {
+        const id = String(m["id"]);
+        let views: number | null = null;
+        let likes: number | null = null;
+        let comments: number | null = null;
+        let shares: number | null = null;
+        try {
+          const ins = await threads(
+            `${THREADS_API}/${id}/insights?metric=views,likes,replies,reposts,quotes&access_token=${encodeURIComponent(token)}`,
+          );
+          views = metricValue(ins, "views");
+          likes = metricValue(ins, "likes");
+          comments = metricValue(ins, "replies");
+          const reposts = metricValue(ins, "reposts");
+          const quotes = metricValue(ins, "quotes");
+          shares = reposts === null && quotes === null ? null : (reposts ?? 0) + (quotes ?? 0);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "Insights do Threads indisponíveis.";
+          if (!errors.includes(msg)) errors.push(msg);
+        }
+
+        posts.push({
+          id,
+          accountId: acc.id,
+          username: acc.username,
+          caption: typeof m["text"] === "string" ? (m["text"] as string) : "",
+          mediaType: String(m["media_type"] ?? "TEXT"),
+          thumbnail: (m["thumbnail_url"] as string) ?? (m["media_url"] as string) ?? null,
+          permalink: (m["permalink"] as string) ?? null,
+          timestamp: String(m["timestamp"] ?? ""),
+          views,
+          likes,
+          shares,
+          comments,
+          reach: null,
+        });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Conta do Threads indisponível.";
+      if (!errors.includes(msg)) errors.push(msg);
+    }
+  }
+
+  posts.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
+
+  const byDay = new Map<string, { views: number; likes: number; shares: number }>();
+  for (let i = days - 1; i >= 0; i--) {
+    const day = new Date(Date.now() - i * 86400_000).toISOString().slice(0, 10);
+    byDay.set(day, { views: 0, likes: 0, shares: 0 });
+  }
+  for (const p of posts) {
+    const bucket = byDay.get(p.timestamp.slice(0, 10));
+    if (!bucket) continue;
+    bucket.views += p.views ?? 0;
+    bucket.likes += p.likes ?? 0;
+    bucket.shares += p.shares ?? 0;
+  }
+
+  return {
+    posts,
+    series: Array.from(byDay.entries()).map(([day, v]) => ({ day, ...v })),
+    totals: {
+      views: posts.reduce((a, p) => a + (p.views ?? 0), 0),
+      likes: posts.reduce((a, p) => a + (p.likes ?? 0), 0),
+      shares: posts.reduce((a, p) => a + (p.shares ?? 0), 0),
+      comments: posts.reduce((a, p) => a + (p.comments ?? 0), 0),
+    },
+    errors,
+  };
+}

@@ -53,3 +53,21 @@ export const completeThreadsConnection = createServerFn({ method: "POST" })
     const account = await exchangeThreadsCodeForAccount(data.code.replace(/#_$/, ""), context.userId);
     return { ok: true as const, username: account.username };
   });
+
+export const getThreadsAccountsInsights = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { fetchThreadsAccountsInsights } = await import("./threads.server");
+    return fetchThreadsAccountsInsights(context.userId);
+  });
+
+export const getThreadsPostsMetrics = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { days?: number } | undefined) => {
+    const days = Number(input?.days ?? 30);
+    return { days: [7, 14, 30, 90].includes(days) ? days : 30 };
+  })
+  .handler(async ({ data, context }) => {
+    const { fetchThreadsPostsMetrics } = await import("./threads.server");
+    return fetchThreadsPostsMetrics(context.userId, data.days);
+  });
