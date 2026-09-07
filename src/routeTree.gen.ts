@@ -28,6 +28,7 @@ import { Route as ApiPublicHooksPublishScheduledRouteImport } from './routes/api
 import { Route as ApiPublicHooksSyncInsightsRouteImport } from './routes/api/public/hooks/sync-insights'
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media/$'
 import { Route as ApiPublicOauthInstagramCallbackRouteImport } from './routes/api/public/oauth/instagram/callback'
+import { Route as ApiPublicOauthThreadsCallbackRouteImport } from './routes/api/public/oauth/threads/callback'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -129,6 +130,12 @@ const ApiPublicOauthInstagramCallbackRoute =
     path: '/api/public/oauth/instagram/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicOauthThreadsCallbackRoute =
+  ApiPublicOauthThreadsCallbackRouteImport.update({
+    id: '/api/public/oauth/threads/callback',
+    path: '/api/public/oauth/threads/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/sync-insights': typeof ApiPublicHooksSyncInsightsRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
+  '/api/public/oauth/threads/callback': typeof ApiPublicOauthThreadsCallbackRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -169,6 +177,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/sync-insights': typeof ApiPublicHooksSyncInsightsRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
+  '/api/public/oauth/threads/callback': typeof ApiPublicOauthThreadsCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -191,6 +200,7 @@ export interface FileRoutesById {
   '/api/public/hooks/sync-insights': typeof ApiPublicHooksSyncInsightsRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
+  '/api/public/oauth/threads/callback': typeof ApiPublicOauthThreadsCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -213,6 +223,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/sync-insights'
     | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
+    | '/api/public/oauth/threads/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -233,6 +244,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/sync-insights'
     | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
+    | '/api/public/oauth/threads/callback'
   id:
     | '__root__'
     | '/_authenticated'
@@ -254,6 +266,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/sync-insights'
     | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
+    | '/api/public/oauth/threads/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -264,6 +277,7 @@ export interface RootRouteChildren {
   ApiPublicHooksSyncInsightsRoute: typeof ApiPublicHooksSyncInsightsRoute
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
   ApiPublicOauthInstagramCallbackRoute: typeof ApiPublicOauthInstagramCallbackRoute
+  ApiPublicOauthThreadsCallbackRoute: typeof ApiPublicOauthThreadsCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -401,6 +415,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOauthInstagramCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/oauth/threads/callback': {
+      id: '/api/public/oauth/threads/callback'
+      path: '/api/public/oauth/threads/callback'
+      fullPath: '/api/public/oauth/threads/callback'
+      preLoaderRoute: typeof ApiPublicOauthThreadsCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -445,6 +466,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksSyncInsightsRoute: ApiPublicHooksSyncInsightsRoute,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
   ApiPublicOauthInstagramCallbackRoute: ApiPublicOauthInstagramCallbackRoute,
+  ApiPublicOauthThreadsCallbackRoute: ApiPublicOauthThreadsCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
