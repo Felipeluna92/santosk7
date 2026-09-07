@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Images, Star, Trash2, Plus, ExternalLink } from "lucide-react";
+import { useRef, useState } from "react";
+import { Images, Star, Trash2, Plus, ExternalLink, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell, EmptyState } from "@/components/AppShell";
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { mediaQuery } from "@/lib/data";
+import { uploadLocalFile, validateFile } from "@/lib/uploads";
 
 export const Route = createFileRoute("/_authenticated/biblioteca")({
   head: () => ({
