@@ -4,8 +4,35 @@ import type { Tables } from "@/integrations/supabase/types";
 export type Account = Tables<"instagram_accounts">;
 export type Post = Tables<"posts">;
 export type MediaItem = Tables<"media_items">;
+export type MediaFolder = Tables<"media_folders">;
+export type CaptionTemplate = Tables<"caption_templates">;
 export type LogRow = Tables<"logs">;
 export type Settings = Tables<"settings">;
+
+export const foldersQuery = {
+  queryKey: ["media-folders"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("media_folders")
+      .select("*")
+      .order("name", { ascending: true });
+    if (error) throw error;
+    return data as MediaFolder[];
+  },
+};
+
+export const captionsQuery = {
+  queryKey: ["caption-templates"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("caption_templates")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data as CaptionTemplate[];
+  },
+};
+
 
 export const POST_STATUS: Record<string, { label: string; tone: string }> = {
   draft: { label: "Rascunho", tone: "bg-muted text-muted-foreground" },
