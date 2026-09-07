@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { accountsQuery } from "@/lib/data";
 import { completeInstagramConnection, getAuthorizationUrl } from "@/lib/meta.functions";
-import { connectThreadsToken } from "@/lib/threads.functions";
+import { completeThreadsConnection, connectThreadsToken, getThreadsAuthorizationUrl } from "@/lib/threads.functions";
 
 export const Route = createFileRoute("/_authenticated/configuracao")({
   head: () => ({
@@ -37,7 +37,12 @@ function randomState() {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function waitForInstagramOAuth(popup: Window, expectedState: string, expectedOrigin: string | null) {
+function waitForOAuth(
+  popup: Window,
+  expectedState: string,
+  expectedOrigin: string | null,
+  provider: "Instagram" | "Threads" = "Instagram",
+) {
   return new Promise<string>((resolve, reject) => {
     let poll: number | undefined;
     const cleanup = () => {
@@ -47,12 +52,12 @@ function waitForInstagramOAuth(popup: Window, expectedState: string, expectedOri
     const onMessage = (event: MessageEvent) => {
       if (event.source !== popup || (expectedOrigin && event.origin !== expectedOrigin)) return;
       if (event.data?.state !== expectedState) return;
-      if (event.data?.type === "sk7InstagramOAuthError") {
+      if (event.data?.type === `sk7${provider}OAuthError`) {
         cleanup();
         reject(new Error(event.data?.error || "A autorização foi cancelada."));
         return;
       }
-      if (event.data?.type !== "sk7InstagramOAuthComplete" || typeof event.data?.code !== "string") return;
+      if (event.data?.type !== `sk7${provider}OAuthComplete` || typeof event.data?.code !== "string") return;
       cleanup();
       resolve(event.data.code);
     };
@@ -89,6 +94,30 @@ function Configuracao() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const connectThreadsOAuth = useMutation({
+    mutationFn: async () => {
+      const popup = window.open("", "sk7-threads-oauth", "width=620,height=760,menubar=no,toolbar=no");
+      if (!popup) throw new Error("Permita pop-ups para conectar sua conta.");
+      try {
+        const state = randomState();
+        const result = await getThreadsAuthorizationUrl({ data: { state } });
+        if (!result.url) throw new Error(result.error || "A conexão com o Threads não está disponível agora.");
+        const expectedOrigin = result.callbackOrigin ? new URL(result.callbackOrigin).origin : window.location.origin;
+        const completion = waitForOAuth(popup, state, expectedOrigin, "Threads");
+        popup.location.href = result.url;
+        const code = await completion;
+        const saved = await completeThreadsConnection({ data: { code } });
+        await qc.invalidateQueries({ queryKey: ["accounts"] });
+        return saved.username;
+      } catch (error) {
+        popup.close();
+        throw error;
+      }
+    },
+    onSuccess: (username) => toast.success(`@${username} conectada no Threads.`),
+    onError: (e: Error) => toast.error(e.message || "Não foi possível concluir a conexão com o Threads."),
+  });
+
   const connect = useMutation({
     mutationFn: async () => {
       setErrorMessage("");
@@ -101,7 +130,7 @@ function Configuracao() {
         if (!result.url) throw new Error(result.error || "A conexão não está disponível agora.");
         const expectedOrigin = result.callbackOrigin ? new URL(result.callbackOrigin).origin : window.location.origin;
         setConnectionState("waiting");
-        const completion = waitForInstagramOAuth(popup, state, expectedOrigin);
+        const completion = waitForOAuth(popup, state, expectedOrigin, "Instagram");
         popup.location.href = result.url;
         const code = await completion;
         setConnectionState("finishing");
@@ -241,7 +270,23 @@ function Configuracao() {
               </div>
             ) : null}
 
-            <div className="mt-6 space-y-2">
+            <Button
+              className="mt-6 h-12 w-full text-sm font-semibold"
+              disabled={connectThreadsOAuth.isPending}
+              onClick={() => connectThreadsOAuth.mutate()}
+            >
+              {connectThreadsOAuth.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <AtSign className="h-4 w-4" />}
+              {connectThreadsOAuth.isPending
+                ? "Aguardando autorização…"
+                : threadsConnected
+                  ? "Reconectar Threads"
+                  : "Conectar Threads"}
+            </Button>
+
+            <details className="mt-6 space-y-2">
+              <summary className="cursor-pointer text-[11px] font-semibold text-muted-foreground">
+                Conectar colando um token manualmente
+              </summary>
               <Label className="text-xs">Token de acesso do Threads</Label>
               <Input
                 type="password"
@@ -258,12 +303,12 @@ function Configuracao() {
                 onClick={() => connectThreads.mutate()}
               >
                 {connectThreads.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <AtSign className="h-4 w-4" />}
-                {threadsConnected ? "Reconectar Threads" : "Conectar Threads"}
+                Usar este token
               </Button>
-              <p className="flex items-center justify-center gap-1.5 pt-2 text-center text-[11px] text-muted-foreground">
-                <ShieldCheck className="h-3.5 w-3.5" /> Requer as permissões threads_basic e threads_content_publish.
-              </p>
-            </div>
+            </details>
+            <p className="flex items-center justify-center gap-1.5 pt-4 text-center text-[11px] text-muted-foreground">
+              <ShieldCheck className="h-3.5 w-3.5" /> Requer as permissões threads_basic e threads_content_publish.
+            </p>
           </div>
         </section>
       </main>
