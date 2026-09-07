@@ -288,7 +288,7 @@ function Composer() {
             onClick={() => {
               setPlatform(p.id);
               setAccountIds([]);
-              if (p.id === "threads") setType("POST");
+              if (p.id === "threads" && type !== "CAROUSEL") setType("POST");
             }}
             className={`rounded-md px-4 py-1.5 text-xs font-semibold transition-colors ${
               platform === p.id ? "bg-surface text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
