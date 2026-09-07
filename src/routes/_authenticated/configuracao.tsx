@@ -270,7 +270,23 @@ function Configuracao() {
               </div>
             ) : null}
 
-            <div className="mt-6 space-y-2">
+            <Button
+              className="mt-6 h-12 w-full text-sm font-semibold"
+              disabled={connectThreadsOAuth.isPending}
+              onClick={() => connectThreadsOAuth.mutate()}
+            >
+              {connectThreadsOAuth.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <AtSign className="h-4 w-4" />}
+              {connectThreadsOAuth.isPending
+                ? "Aguardando autorização…"
+                : threadsConnected
+                  ? "Reconectar Threads"
+                  : "Conectar Threads"}
+            </Button>
+
+            <details className="mt-6 space-y-2">
+              <summary className="cursor-pointer text-[11px] font-semibold text-muted-foreground">
+                Conectar colando um token manualmente
+              </summary>
               <Label className="text-xs">Token de acesso do Threads</Label>
               <Input
                 type="password"
