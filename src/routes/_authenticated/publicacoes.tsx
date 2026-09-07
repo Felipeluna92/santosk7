@@ -18,6 +18,7 @@ import { AppShell, EmptyState } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPostsMetrics } from "@/lib/meta.functions";
+import { getThreadsPostsMetrics } from "@/lib/threads.functions";
 
 export const Route = createFileRoute("/_authenticated/publicacoes")({
   head: () => ({
@@ -82,10 +83,12 @@ function interactions(p: Post) {
 function Publicacoes() {
   const [days, setDays] = useState<number>(30);
   const [sort, setSort] = useState<(typeof SORTS)[number]["key"]>("recent");
+  const [platform, setPlatform] = useState<"instagram" | "threads">("instagram");
 
   const q = useQuery({
-    queryKey: ["posts-metrics", days],
-    queryFn: () => getPostsMetrics({ data: { days } }),
+    queryKey: ["posts-metrics", platform, days],
+    queryFn: () =>
+      platform === "threads" ? getThreadsPostsMetrics({ data: { days } }) : getPostsMetrics({ data: { days } }),
     staleTime: 0,
     refetchInterval: 300_000,
     refetchOnWindowFocus: true,
@@ -140,7 +143,7 @@ function Publicacoes() {
   return (
     <AppShell
       title="Publicações"
-      subtitle="Posts publicados organizados por conta"
+      subtitle={platform === "threads" ? "Posts do Threads organizados por conta" : "Posts do Instagram organizados por conta"}
       actions={
         <Button variant="outline" size="sm" onClick={() => q.refetch()} disabled={q.isFetching}>
           <RefreshCw className={`h-4 w-4 ${q.isFetching ? "animate-spin" : ""}`} /> Atualizar
@@ -148,6 +151,20 @@ function Publicacoes() {
       }
     >
       <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex rounded-md border border-border p-0.5">
+          {(["instagram", "threads"] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPlatform(p)}
+              className={`rounded px-3 py-1 text-[11px] font-semibold transition-colors ${
+                platform === p ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {p === "threads" ? "Threads" : "Instagram"}
+            </button>
+          ))}
+        </div>
         <div className="flex rounded-md border border-border p-0.5">
           {PERIODS.map((p) => (
             <button

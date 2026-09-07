@@ -8,6 +8,7 @@ import { AppShell, EmptyState } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getPostsMetrics } from "@/lib/meta.functions";
+import { getThreadsPostsMetrics } from "@/lib/threads.functions";
 
 export const Route = createFileRoute("/_authenticated/metricas")({
   head: () => ({
@@ -50,10 +51,12 @@ const TYPE_LABEL: Record<string, string> = {
 
 function Metricas() {
   const [days, setDays] = useState<number>(30);
+  const [platform, setPlatform] = useState<"instagram" | "threads">("instagram");
 
   const q = useQuery({
-    queryKey: ["posts-metrics", days],
-    queryFn: () => getPostsMetrics({ data: { days } }),
+    queryKey: ["posts-metrics", platform, days],
+    queryFn: () =>
+      platform === "threads" ? getThreadsPostsMetrics({ data: { days } }) : getPostsMetrics({ data: { days } }),
     staleTime: 0,
     refetchInterval: 300_000,
     refetchOnWindowFocus: true,
@@ -74,13 +77,28 @@ function Metricas() {
   return (
     <AppShell
       title="Métricas"
-      subtitle="Desempenho de cada publicação"
+      subtitle={platform === "threads" ? "Desempenho de cada post no Threads" : "Desempenho de cada publicação no Instagram"}
       actions={
         <Button variant="outline" size="sm" onClick={() => q.refetch()} disabled={q.isFetching}>
           <RefreshCw className={`h-4 w-4 ${q.isFetching ? "animate-spin" : ""}`} /> Atualizar
         </Button>
       }
     >
+      <div className="mb-3 flex w-fit rounded-md border border-border p-0.5">
+        {(["instagram", "threads"] as const).map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => setPlatform(p)}
+            className={`rounded px-3 py-1 text-[11px] font-semibold transition-colors ${
+              platform === p ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {p === "threads" ? "Threads" : "Instagram"}
+          </button>
+        ))}
+      </div>
+
       <div className="mb-4 flex w-fit rounded-md border border-border p-0.5">
         {PERIODS.map((p) => (
           <button
@@ -170,7 +188,11 @@ function Metricas() {
           <EmptyState
             icon={BarChart3}
             title="Sem publicações no período"
-            description="Conecte uma conta e publique para ver views, curtidas e compartilhamentos de cada post."
+            description={
+              platform === "threads"
+                ? "Conecte uma conta do Threads e publique para ver os números dos seus posts."
+                : "Conecte uma conta do Instagram e publique para ver views, curtidas e compartilhamentos de cada post."
+            }
           />
         ) : (
           <div className="space-y-2">
@@ -213,7 +235,7 @@ function Metricas() {
                       target="_blank"
                       rel="noreferrer"
                       className="text-muted-foreground transition-colors hover:text-foreground"
-                      aria-label="Abrir no Instagram"
+                      aria-label={platform === "threads" ? "Abrir no Threads" : "Abrir no Instagram"}
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
