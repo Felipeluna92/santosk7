@@ -42,6 +42,30 @@ function Biblioteca() {
   const [type, setType] = useState("IMAGE");
   const [tags, setTags] = useState("");
   const [onlyFav, setOnlyFav] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File) => {
+    const kind = file.type.startsWith("video") ? "video" : "image";
+    const invalid = validateFile(file, kind);
+    if (invalid) {
+      toast.error(invalid);
+      return;
+    }
+    setUploading(true);
+    try {
+      const { url: publicUrl } = await uploadLocalFile(file, kind);
+      setUrl(publicUrl);
+      setType(kind === "video" ? "VIDEO" : "IMAGE");
+      if (!title.trim()) setTitle(file.name.replace(/\.[^.]+$/, ""));
+      toast.success("Arquivo enviado. Complete os dados e salve.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha no upload.");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   const add = useMutation({
     mutationFn: async () => {
