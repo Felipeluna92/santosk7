@@ -166,17 +166,18 @@ function Composer() {
   })();
 
   const mediaError = (() => {
+    if (type === "CAROUSEL") {
+      const max = isThreads ? 20 : 10;
+      if (carouselUrls.length < 2) return "Um carrossel precisa de pelo menos 2 URLs públicas.";
+      if (carouselUrls.length > max) return `Máximo de ${max} mídias por carrossel.`;
+      if (carouselUrls.some((u) => !isPublicUrl(u))) return "Há URLs inválidas ou não públicas no carrossel.";
+      return null;
+    }
     if (isThreads) {
       if (!mediaUrl.trim() && !caption.trim() && !hashtags.trim())
         return "Escreva um texto ou anexe uma mídia para publicar no Threads.";
       if (mediaUrl.trim() && !isPublicUrl(mediaUrl))
         return "A URL precisa ser pública e acessível pelo Threads (http/https).";
-      return null;
-    }
-    if (type === "CAROUSEL") {
-      if (carouselUrls.length < 2) return "Um carrossel precisa de pelo menos 2 URLs públicas.";
-      if (carouselUrls.length > 10) return "Máximo de 10 mídias por carrossel.";
-      if (carouselUrls.some((u) => !isPublicUrl(u))) return "Há URLs inválidas ou não públicas no carrossel.";
       return null;
     }
     if (!mediaUrl.trim()) return "Informe a URL pública da mídia.";
@@ -190,14 +191,15 @@ function Composer() {
   const payload = (accId: string | null, when?: string | null, captionText?: string) => ({
     account_id: accId,
     platform,
-    type: isThreads ? "POST" : type,
+    type: isThreads ? (type === "CAROUSEL" ? "CAROUSEL" : "POST") : type,
     caption: !isThreads && type === "STORY" ? null : (captionText ?? caption) || null,
     hashtags: !isThreads && type === "STORY" ? null : hashtags || null,
-    media_url: !isThreads && type === "CAROUSEL" ? null : mediaUrl || null,
+    media_url: type === "CAROUSEL" ? null : mediaUrl || null,
     cover_url: !isThreads && type === "REEL" ? coverUrl || null : null,
-    carousel_urls: !isThreads && type === "CAROUSEL" ? carouselUrls : [],
+    carousel_urls: type === "CAROUSEL" ? carouselUrls : [],
     scheduled_at: when ? new Date(when).toISOString() : null,
   });
+
 
   const savePost = async (status: string, accId: string | null, when?: string | null, captionText?: string) => {
     const { data, error } = await supabase
