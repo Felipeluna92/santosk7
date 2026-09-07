@@ -106,7 +106,7 @@ function Configuracao() {
         if (!result.url) throw new Error(result.error || "A conexão não está disponível agora.");
         const expectedOrigin = result.callbackOrigin ? new URL(result.callbackOrigin).origin : window.location.origin;
         setConnectionState("waiting");
-        const completion = waitForInstagramOAuth(popup, state, expectedOrigin);
+        const completion = waitForOAuth(popup, state, expectedOrigin, "Instagram");
         popup.location.href = result.url;
         const code = await completion;
         setConnectionState("finishing");
