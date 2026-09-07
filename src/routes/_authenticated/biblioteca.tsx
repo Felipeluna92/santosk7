@@ -152,10 +152,17 @@ function Biblioteca() {
   });
 
   const updateItem = useMutation({
-    mutationFn: async ({ id, values }: { id: string; values: Record<string, unknown> }) => {
+    mutationFn: async ({
+      id,
+      values,
+    }: {
+      id: string;
+      values: { title?: string; favorite?: boolean; folder_id?: string | null };
+    }) => {
       const { error } = await supabase.from("media_items").update(values).eq("id", id);
       if (error) throw new Error(error.message);
     },
+
     onSuccess: invalidateMedia,
     onError: (e: Error) => toast.error(e.message),
   });
