@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { accountsQuery } from "@/lib/data";
 import { completeInstagramConnection, getAuthorizationUrl } from "@/lib/meta.functions";
-import { connectThreadsToken } from "@/lib/threads.functions";
+import { completeThreadsConnection, connectThreadsToken, getThreadsAuthorizationUrl } from "@/lib/threads.functions";
 
 export const Route = createFileRoute("/_authenticated/configuracao")({
   head: () => ({
