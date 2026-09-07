@@ -83,7 +83,7 @@ async function saveThreadsAccount(
         display_name: (me["name"] as string) ?? null,
         profile_picture_url: (me["threads_profile_picture_url"] as string) ?? null,
         account_type: "THREADS",
-        scopes: THREADS_SCOPES,
+        scopes,
         token_expires_at: expiresIn ? new Date(Date.now() + expiresIn * 1000).toISOString() : null,
         last_sync_at: new Date().toISOString(),
         status: "connected",
