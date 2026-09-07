@@ -124,7 +124,27 @@ function Biblioteca() {
         </Button>
       }
     >
-      <div className="panel mb-3 grid gap-3 p-4 md:grid-cols-[1.2fr_2fr_0.9fr_1.2fr_auto]">
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/jpeg,image/png,video/mp4,video/quicktime"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleFile(file);
+        }}
+      />
+      <div className="panel mb-3 space-y-3 p-4">
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => fileRef.current?.click()}
+          className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border bg-background px-3 py-4 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground disabled:opacity-60"
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {uploading ? "Enviando arquivo..." : "Subir imagem ou vídeo do dispositivo (JPG, PNG, MP4 ou MOV)"}
+        </button>
+        <div className="grid gap-3 md:grid-cols-[1.2fr_2fr_0.9fr_1.2fr_auto]">
         <div className="space-y-1.5">
           <Label className="text-xs">Título</Label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} className="bg-background" />
@@ -158,6 +178,7 @@ function Biblioteca() {
           <Button size="sm" onClick={() => add.mutate()} disabled={add.isPending}>
             <Plus className="h-4 w-4" /> Salvar
           </Button>
+        </div>
         </div>
       </div>
 
