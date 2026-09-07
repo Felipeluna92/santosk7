@@ -105,6 +105,73 @@ async function saveThreadsAccount(
   return { id: account.id, username: account.username };
 }
 
+/** Conecta uma conta do Threads validando um token colado manualmente. */
+export async function connectThreadsWithToken(rawToken: string, userId: string) {
+  const input = rawToken.trim();
+  if (input.length < 20) throw new Error("Token inválido. Cole o token de acesso completo do Threads.");
+
+  let token = input;
+  let expiresIn: number | null = null;
+  const appSecret = process.env["THREADS_APP_SECRET"] ?? process.env["META_APP_SECRET"];
+
+  if (appSecret) {
+    try {
+      const long = await threads(
+        `${THREADS_API.replace("/v1.0", "")}/access_token?grant_type=th_exchange_token&client_secret=${encodeURIComponent(
+          appSecret,
+        )}&access_token=${encodeURIComponent(token)}`,
+      );
+      if (long["access_token"]) token = String(long["access_token"]);
+      expiresIn = Number(long["expires_in"] ?? 0) || null;
+    } catch {
+      // Pode já ser um token de longa duração; segue com o informado.
+    }
+  }
+
+  return saveThreadsAccount(token, expiresIn, userId);
+}
+
+/** Fluxo OAuth oficial: troca o código pelo token e salva a conta. */
+export async function exchangeThreadsCodeForAccount(code: string, userId: string) {
+  const env = readThreadsEnv();
+  if (!env.appId || !env.appSecret) {
+    throw new Error("Credenciais do app do Threads não configuradas no servidor.");
+  }
+
+  console.info("[threads-oauth] token exchange redirect_uri:", env.redirectUri);
+  await writeLog(userId, "oauth", "info", `Troca de código do Threads usando redirect_uri: ${env.redirectUri}`);
+
+  const short = await threads("https://graph.threads.net/oauth/access_token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: env.appId,
+      client_secret: env.appSecret,
+      grant_type: "authorization_code",
+      redirect_uri: env.redirectUri,
+      code,
+    }),
+  });
+
+  let token = String(short["access_token"] ?? "");
+  if (!token) throw new Error("O Threads não devolveu o token de acesso.");
+  let expiresIn: number | null = null;
+
+  try {
+    const long = await threads(
+      `https://graph.threads.net/access_token?grant_type=th_exchange_token&client_secret=${encodeURIComponent(
+        env.appSecret,
+      )}&access_token=${encodeURIComponent(token)}`,
+    );
+    if (long["access_token"]) token = String(long["access_token"]);
+    expiresIn = Number(long["expires_in"] ?? 0) || null;
+  } catch {
+    // Segue com o token de curta duração.
+  }
+
+  return saveThreadsAccount(token, expiresIn, userId);
+}
+
 export async function syncThreadsAccount(accountId: string, userId: string, token: string) {
   const me = await threads(
     `${THREADS_API}/me?fields=id,username,name,threads_profile_picture_url&access_token=${encodeURIComponent(token)}`,
