@@ -213,23 +213,65 @@ type ThreadsPost = {
   caption: string | null;
   hashtags: string | null;
   media_url: string | null;
+  carousel_urls?: string[] | null;
   meta_container_id: string | null;
 };
 
+const isVideoUrl = (url: string) => /\.(mp4|mov|m4v)(\?|$)/i.test(url);
+
 /**
  * Publica um post no Threads em duas etapas (container + publish).
- * Suporta texto puro, imagem e vídeo — o Threads não tem Reels, carrossel de
- * mídia mista nem Stories nesta API.
+ * Suporta texto puro, imagem, vídeo e carrossel (2 a 20 mídias).
+ * O Threads não tem Reels nem Stories nesta API.
  */
 export async function publishThreadsPost(post: ThreadsPost, threadsUserId: string, token: string) {
   const text = [post.caption ?? "", post.hashtags ?? ""].filter(Boolean).join("\n\n");
   const url = (post.media_url ?? "").trim();
-  const isVideo = /\.(mp4|mov|m4v)(\?|$)/i.test(url);
+  const isVideo = isVideoUrl(url);
+  const carousel = (post.carousel_urls ?? []).map((u) => (u ?? "").trim()).filter(Boolean);
+  const isCarousel = post.type === "CAROUSEL" && carousel.length >= 2;
 
-  if (!text && !url) throw new Error("Escreva um texto ou anexe uma mídia para publicar no Threads.");
+  if (isCarousel && carousel.length > 20) {
+    throw new Error("O carrossel do Threads aceita no máximo 20 mídias.");
+  }
+  if (!text && !url && !isCarousel) {
+    throw new Error("Escreva um texto ou anexe uma mídia para publicar no Threads.");
+  }
 
   let containerId = post.meta_container_id ?? "";
-  if (!containerId) {
+  let needsWait = Boolean(url) || isCarousel;
+
+  if (!containerId && isCarousel) {
+    const children: string[] = [];
+    for (const item of carousel) {
+      const created = await threads(`${THREADS_API}/${threadsUserId}/threads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          media_type: isVideoUrl(item) ? "VIDEO" : "IMAGE",
+          ...(isVideoUrl(item) ? { video_url: item } : { image_url: item }),
+          is_carousel_item: "true",
+          access_token: token,
+        }),
+      });
+      const childId = String(created["id"] ?? "");
+      if (!childId) throw new Error("O Threads não retornou o identificador de uma das mídias do carrossel.");
+      await waitForThreadsContainer(childId, token);
+      children.push(childId);
+    }
+    const parent = await threads(`${THREADS_API}/${threadsUserId}/threads`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        media_type: "CAROUSEL",
+        children: children.join(","),
+        ...(text ? { text } : {}),
+        access_token: token,
+      }),
+    });
+    containerId = String(parent["id"] ?? "");
+    if (!containerId) throw new Error("O Threads não retornou o identificador do carrossel.");
+  } else if (!containerId) {
     const body = new URLSearchParams({
       media_type: url ? (isVideo ? "VIDEO" : "IMAGE") : "TEXT",
       ...(text ? { text } : {}),
@@ -243,12 +285,14 @@ export async function publishThreadsPost(post: ThreadsPost, threadsUserId: strin
     });
     containerId = String(created["id"] ?? "");
     if (!containerId) throw new Error("O Threads não retornou o identificador da publicação.");
+    needsWait = Boolean(url);
   }
 
-  if (url) {
+  if (needsWait) {
     const ready = await waitForThreadsContainer(containerId, token);
     if (!ready) return { containerId, mediaId: null as string | null, retry: true as const };
   }
+
 
   const published = await threads(`${THREADS_API}/${threadsUserId}/threads_publish`, {
     method: "POST",
