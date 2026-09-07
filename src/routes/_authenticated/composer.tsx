@@ -449,7 +449,7 @@ function Composer() {
                 ) : t === "CAROUSEL" ? (
                   <div className="space-y-1.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <Label className="text-xs">URLs do carrossel (uma por linha, 2 a 10)</Label>
+                      <Label className="text-xs">URLs do carrossel (uma por linha, 2 a {isThreads ? 20 : 10})</Label>
                       <MediaPicker
                         multiple
                         label="Escolher da biblioteca"
