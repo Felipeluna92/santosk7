@@ -35,6 +35,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { accountsQuery, postsQuery, POST_STATUS, fmtDate } from "@/lib/data";
 import { publishPost } from "@/lib/meta.functions";
 import { MediaUpload } from "@/components/MediaUpload";
+import { MediaPicker } from "@/components/MediaPicker";
+import { CaptionPicker } from "@/components/CaptionPicker";
 import { StoryEditor } from "@/components/StoryEditor";
 
 export const Route = createFileRoute("/_authenticated/composer")({
