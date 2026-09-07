@@ -37,7 +37,12 @@ function randomState() {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function waitForInstagramOAuth(popup: Window, expectedState: string, expectedOrigin: string | null) {
+function waitForOAuth(
+  popup: Window,
+  expectedState: string,
+  expectedOrigin: string | null,
+  provider: "Instagram" | "Threads" = "Instagram",
+) {
   return new Promise<string>((resolve, reject) => {
     let poll: number | undefined;
     const cleanup = () => {
@@ -47,12 +52,12 @@ function waitForInstagramOAuth(popup: Window, expectedState: string, expectedOri
     const onMessage = (event: MessageEvent) => {
       if (event.source !== popup || (expectedOrigin && event.origin !== expectedOrigin)) return;
       if (event.data?.state !== expectedState) return;
-      if (event.data?.type === "sk7InstagramOAuthError") {
+      if (event.data?.type === `sk7${provider}OAuthError`) {
         cleanup();
         reject(new Error(event.data?.error || "A autorização foi cancelada."));
         return;
       }
-      if (event.data?.type !== "sk7InstagramOAuthComplete" || typeof event.data?.code !== "string") return;
+      if (event.data?.type !== `sk7${provider}OAuthComplete` || typeof event.data?.code !== "string") return;
       cleanup();
       resolve(event.data.code);
     };
