@@ -29,6 +29,8 @@ import { Route as ApiPublicHooksSyncInsightsRouteImport } from './routes/api/pub
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media/$'
 import { Route as ApiPublicOauthInstagramCallbackRouteImport } from './routes/api/public/oauth/instagram/callback'
 import { Route as ApiPublicOauthThreadsCallbackRouteImport } from './routes/api/public/oauth/threads/callback'
+import { Route as ApiPublicOauthThreadsDataDeletionRouteImport } from './routes/api/public/oauth/threads/data-deletion'
+import { Route as ApiPublicOauthThreadsDeauthorizeRouteImport } from './routes/api/public/oauth/threads/deauthorize'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -136,6 +138,18 @@ const ApiPublicOauthThreadsCallbackRoute =
     path: '/api/public/oauth/threads/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicOauthThreadsDataDeletionRoute =
+  ApiPublicOauthThreadsDataDeletionRouteImport.update({
+    id: '/api/public/oauth/threads/data-deletion',
+    path: '/api/public/oauth/threads/data-deletion',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicOauthThreadsDeauthorizeRoute =
+  ApiPublicOauthThreadsDeauthorizeRouteImport.update({
+    id: '/api/public/oauth/threads/deauthorize',
+    path: '/api/public/oauth/threads/deauthorize',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -157,6 +171,8 @@ export interface FileRoutesByFullPath {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
   '/api/public/oauth/threads/callback': typeof ApiPublicOauthThreadsCallbackRoute
+  '/api/public/oauth/threads/data-deletion': typeof ApiPublicOauthThreadsDataDeletionRoute
+  '/api/public/oauth/threads/deauthorize': typeof ApiPublicOauthThreadsDeauthorizeRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -178,6 +194,8 @@ export interface FileRoutesByTo {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
   '/api/public/oauth/threads/callback': typeof ApiPublicOauthThreadsCallbackRoute
+  '/api/public/oauth/threads/data-deletion': typeof ApiPublicOauthThreadsDataDeletionRoute
+  '/api/public/oauth/threads/deauthorize': typeof ApiPublicOauthThreadsDeauthorizeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -201,6 +219,8 @@ export interface FileRoutesById {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/oauth/instagram/callback': typeof ApiPublicOauthInstagramCallbackRoute
   '/api/public/oauth/threads/callback': typeof ApiPublicOauthThreadsCallbackRoute
+  '/api/public/oauth/threads/data-deletion': typeof ApiPublicOauthThreadsDataDeletionRoute
+  '/api/public/oauth/threads/deauthorize': typeof ApiPublicOauthThreadsDeauthorizeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -224,6 +244,8 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
     | '/api/public/oauth/threads/callback'
+    | '/api/public/oauth/threads/data-deletion'
+    | '/api/public/oauth/threads/deauthorize'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -245,6 +267,8 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
     | '/api/public/oauth/threads/callback'
+    | '/api/public/oauth/threads/data-deletion'
+    | '/api/public/oauth/threads/deauthorize'
   id:
     | '__root__'
     | '/_authenticated'
@@ -267,6 +291,8 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/oauth/instagram/callback'
     | '/api/public/oauth/threads/callback'
+    | '/api/public/oauth/threads/data-deletion'
+    | '/api/public/oauth/threads/deauthorize'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -278,6 +304,8 @@ export interface RootRouteChildren {
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
   ApiPublicOauthInstagramCallbackRoute: typeof ApiPublicOauthInstagramCallbackRoute
   ApiPublicOauthThreadsCallbackRoute: typeof ApiPublicOauthThreadsCallbackRoute
+  ApiPublicOauthThreadsDataDeletionRoute: typeof ApiPublicOauthThreadsDataDeletionRoute
+  ApiPublicOauthThreadsDeauthorizeRoute: typeof ApiPublicOauthThreadsDeauthorizeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -422,6 +450,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOauthThreadsCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/oauth/threads/data-deletion': {
+      id: '/api/public/oauth/threads/data-deletion'
+      path: '/api/public/oauth/threads/data-deletion'
+      fullPath: '/api/public/oauth/threads/data-deletion'
+      preLoaderRoute: typeof ApiPublicOauthThreadsDataDeletionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/oauth/threads/deauthorize': {
+      id: '/api/public/oauth/threads/deauthorize'
+      path: '/api/public/oauth/threads/deauthorize'
+      fullPath: '/api/public/oauth/threads/deauthorize'
+      preLoaderRoute: typeof ApiPublicOauthThreadsDeauthorizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -467,6 +509,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
   ApiPublicOauthInstagramCallbackRoute: ApiPublicOauthInstagramCallbackRoute,
   ApiPublicOauthThreadsCallbackRoute: ApiPublicOauthThreadsCallbackRoute,
+  ApiPublicOauthThreadsDataDeletionRoute:
+    ApiPublicOauthThreadsDataDeletionRoute,
+  ApiPublicOauthThreadsDeauthorizeRoute: ApiPublicOauthThreadsDeauthorizeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
