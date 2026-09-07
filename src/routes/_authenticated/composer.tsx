@@ -181,11 +181,14 @@ function Composer() {
     return null;
   })();
 
-  const payload = (accId: string | null, when?: string | null) => ({
+  const captionPool = captionVariants.length ? captionVariants : [caption];
+  const captionAt = (i: number) => captionPool[i % captionPool.length] ?? caption;
+
+  const payload = (accId: string | null, when?: string | null, captionText?: string) => ({
     account_id: accId,
     platform,
     type: isThreads ? "POST" : type,
-    caption: !isThreads && type === "STORY" ? null : caption || null,
+    caption: !isThreads && type === "STORY" ? null : (captionText ?? caption) || null,
     hashtags: !isThreads && type === "STORY" ? null : hashtags || null,
     media_url: !isThreads && type === "CAROUSEL" ? null : mediaUrl || null,
     cover_url: !isThreads && type === "REEL" ? coverUrl || null : null,
@@ -193,10 +196,10 @@ function Composer() {
     scheduled_at: when ? new Date(when).toISOString() : null,
   });
 
-  const savePost = async (status: string, accId: string | null, when?: string | null) => {
+  const savePost = async (status: string, accId: string | null, when?: string | null, captionText?: string) => {
     const { data, error } = await supabase
       .from("posts")
-      .insert({ ...payload(accId, when ?? null), status })
+      .insert({ ...payload(accId, when ?? null, captionText), status })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
@@ -207,7 +210,11 @@ function Composer() {
 
   const draftMutation = useMutation({
     mutationFn: async () => {
-      for (const acc of targetAccounts()) await savePost("draft", acc, scheduledAt || null);
+      let i = 0;
+      for (const acc of targetAccounts()) {
+        await savePost("draft", acc, scheduledAt || null, captionAt(i));
+        i++;
+      }
       return targetAccounts().length;
     },
     onSuccess: (n) => {
@@ -229,7 +236,7 @@ function Composer() {
       let n = 0;
       for (const t of allTimes)
         for (const acc of accountIds) {
-          await savePost("scheduled", acc, t);
+          await savePost("scheduled", acc, t, captionAt(n));
           n++;
         }
       return n;
@@ -246,9 +253,11 @@ function Composer() {
     mutationFn: async () => {
       if (capabilityError) throw new Error(capabilityError);
       if (mediaError) throw new Error(mediaError);
+      let i = 0;
       for (const acc of accountIds) {
-        const id = await savePost("draft", acc, null);
+        const id = await savePost("draft", acc, null, captionAt(i));
         await publishPost({ data: { postId: id } });
+        i++;
       }
       return accountIds.length;
     },
@@ -258,6 +267,7 @@ function Composer() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const busy = draftMutation.isPending || scheduleMutation.isPending || publishMutation.isPending;
 
