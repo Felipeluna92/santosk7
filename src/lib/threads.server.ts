@@ -744,7 +744,7 @@ export async function syncThreadsInsights(
             )
             .select("id")
             .single();
-          if (row?.id) mediaUpserted++;
+          if ((row as { id?: string } | null)?.id) mediaUpserted++;
         }
       } catch (e) {
         errors++;
