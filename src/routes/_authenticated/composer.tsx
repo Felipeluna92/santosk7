@@ -102,6 +102,23 @@ function Composer() {
   const [schedTime, setSchedTime] = useState("");
   const [extraTimes, setExtraTimes] = useState<string[]>([]);
   const [newTime, setNewTime] = useState("");
+  const [newDate, setNewDate] = useState("");
+
+  /** Escolha de mídia inteligente: 2+ arquivos viram carrossel, 1 volta a ser post simples. */
+  const applyMediaSelection = (urls: string[]) => {
+    const clean = urls.filter(Boolean);
+    if (clean.length === 0) return;
+    if (clean.length > 1) {
+      setCarousel(clean.join("\n"));
+      setMediaUrl("");
+      setType("CAROUSEL");
+      toast.success(`${clean.length} mídias — virou carrossel automaticamente.`);
+      return;
+    }
+    setCarousel("");
+    setMediaUrl(clean[0] as string);
+    setType((prev) => (prev === "CAROUSEL" ? "POST" : prev));
+  };
 
   const isThreads = platform === "threads";
   const accountList = (accounts.data ?? []).filter((a) => (a.platform ?? "instagram") === platform);
@@ -481,9 +498,11 @@ function Composer() {
                       <MediaPicker
                         multiple
                         label="Escolher da biblioteca"
-                        onSelect={(urls) =>
-                          setCarousel((prev) => [...prev.split("\n").filter(Boolean), ...urls].join("\n"))
-                        }
+                        onSelect={(urls) => {
+                          const all = [...carousel.split("\n").filter(Boolean), ...urls.filter(Boolean)];
+                          if (all.length === 1) applyMediaSelection(all);
+                          else setCarousel(all.join("\n"));
+                        }}
                       />
                     </div>
                     <Textarea
@@ -510,9 +529,10 @@ function Composer() {
                       }
                     />
                     <MediaPicker
-                      kind={t === "REEL" ? "VIDEO" : "IMAGE"}
-                      label="Escolher da biblioteca"
-                      onSelect={(urls) => urls[0] && setMediaUrl(urls[0])}
+                      multiple={t !== "REEL"}
+                      {...(t === "REEL" ? { kind: "VIDEO" as const } : {})}
+                      label={t === "REEL" ? "Escolher da biblioteca" : "Escolher da biblioteca (2+ viram carrossel)"}
+                      onSelect={(urls) => (t === "REEL" ? urls[0] && setMediaUrl(urls[0]) : applyMediaSelection(urls))}
                     />
                     {t === "REEL" ? (
                       <MediaUpload
