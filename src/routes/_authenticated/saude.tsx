@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, ArrowRight, CheckCircle2, RefreshCw, Sparkles, Target, TrendingUp } from "lucide-react";
+import { Activity, CheckCircle2, RefreshCw, Target, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell, EmptyState } from "@/components/AppShell";
@@ -99,7 +99,6 @@ function HealthPage() {
               <div className="rounded-lg bg-muted/60 p-4">
                 <h3 className="flex items-center gap-2 text-sm font-semibold"><TrendingUp className="h-4 w-4 text-success" /> Leitura rápida</h3>
                 <dl className="mt-3 space-y-2 text-[12px]"><div className="flex justify-between gap-3"><dt className="text-muted-foreground">Ponto forte</dt><dd className="font-semibold">{report.strongest ?? "Em análise"}</dd></div><div className="flex justify-between gap-3"><dt className="text-muted-foreground">Maior oportunidade</dt><dd className="font-semibold">{report.weakest ?? "Coletar dados"}</dd></div><div className="flex justify-between gap-3"><dt className="text-muted-foreground">Completude</dt><dd className="font-semibold">{report.completeness}%</dd></div></dl>
-                <Button asChild variant="ghost" size="sm" className="mt-3 w-full justify-between"><Link to="/ai">Explorar inteligência <ArrowRight className="h-4 w-4" /></Link></Button>
               </div>
             </div>
           </div>

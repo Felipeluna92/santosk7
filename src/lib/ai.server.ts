@@ -1,5 +1,5 @@
-// Server-only: transforma dados coletados em inteligência de conteúdo.
-// O backend calcula tudo; o modelo de linguagem apenas explica os números já calculados.
+// Server-only: transforma os dados coletados (ig_media / account_daily_metrics) no
+// diagnóstico de crescimento da página Saúde. Sem modelos de linguagem externos.
 import {
   buildHeatmap,
   buildGrowthHealth,
@@ -9,7 +9,6 @@ import {
   maturityFor,
   mean,
   median,
-  predictRange,
   rankBy,
   scoreMedia,
   trendOf,
@@ -160,90 +159,3 @@ export async function buildGrowthHealthReport(userId: string) {
   }));
 }
 
-/** Previsão por vizinhos comparáveis do próprio histórico. Nunca um número único. */
-export async function predictPerformance(userId: string, input: {
-  accountId: string;
-  format: string;
-  dow: number;
-  hour: number;
-}) {
-  const rows = await loadMedia(userId, input.accountId);
-  const { scored } = scoreMedia(rows);
-  const sameFormat = scored.filter((s) => s.format === input.format && typeof s.views === "number");
-  const nearSlot = sameFormat.filter(
-    (s) => s.dow === input.dow && Math.abs(s.hour - input.hour) <= 2,
-  );
-  const pool = nearSlot.length >= 3 ? nearSlot : sameFormat;
-  const range = predictRange(pool.map((p) => p.views as number));
-  return {
-    range,
-    basedOn: pool.length,
-    matched: nearSlot.length >= 3 ? "formato + faixa de horário" : "formato",
-    note: range
-      ? null
-      : "Ainda não existem dados suficientes para uma previsão confiável. Publique mais neste formato para melhorar a estimativa.",
-  };
-}
-
-const SYSTEM_PROMPT = `Você é a AI Cálica, analista de conteúdo do Instagram do usuário.
-Regras invioláveis:
-- Responda em português do Brasil, direto e prático.
-- Use SOMENTE os números do JSON fornecido. Nunca invente métricas nem estime valores fora dele.
-- Se o JSON não tiver dados suficientes, diga claramente que não dá para concluir com confiança.
-- Recomendações são probabilidades, não garantias. Nunca use "viral garantido", "resultado garantido" ou "horário perfeito".
-- Sempre cite o período/amostra e o nível de confiança que sustentam cada afirmação.
-- Índice de desempenho 1,00 = igual à mediana histórica da conta.
-- Métrica ausente significa indisponível na API, jamais zero.`;
-
-export async function askIntelligence(userId: string, question: string, accountId: string | null) {
-  const key = process.env["LOVABLE_API_KEY"];
-  if (!key) return { answer: "A IA não está configurada neste projeto.", context: null };
-
-  const data = await buildAccountIntelligence(userId, accountId);
-  const compact = {
-    publicacoesAnalisadas: data.postsAnalyzed,
-    maturidade: data.maturity,
-    tendencia: data.trend,
-    frequenciaSemanal: data.weeklyFrequency,
-    metricasCalculadas: data.calculated,
-    melhoresHorarios: data.bestSlots.map((s) => ({
-      dia: DOW_LABELS[s.dow],
-      hora: `${String(s.hour).padStart(2, "0")}:00`,
-      indice: s.score,
-      amostras: s.samples,
-      confianca: s.confidence,
-      viewsMedias: s.avgViews,
-    })),
-    horariosEvitar: data.avoidSlots.map((s) => ({
-      dia: DOW_LABELS[s.dow],
-      hora: `${String(s.hour).padStart(2, "0")}:00`,
-      indice: s.score,
-      amostras: s.samples,
-    })),
-    porFormato: data.byFormat,
-    porDia: data.byDow,
-    porDuracao: data.byDuration,
-    hashtags: data.byHashtag,
-    melhoresPublicacoes: data.topPosts,
-    pioresPublicacoes: data.bottomPosts,
-    metricasIndisponiveis: data.unavailableMetrics,
-  };
-
-  const { generateText } = await import("ai");
-  const { createLovableAiGatewayProvider } = await import("./ai-gateway.server");
-  const gateway = createLovableAiGatewayProvider(key);
-
-  try {
-    const { text } = await generateText({
-      model: gateway("google/gemini-3.6-flash"),
-      system: SYSTEM_PROMPT,
-      prompt: `Dados calculados pelo backend (JSON):\n${JSON.stringify(compact)}\n\nPergunta do usuário: ${question}`,
-    });
-    return { answer: text, context: { postsAnalyzed: data.postsAnalyzed, maturity: data.maturity.label } };
-  } catch (e) {
-    const message = e instanceof Error ? e.message : "";
-    if (message.includes("429")) return { answer: "Limite de uso da IA atingido. Tente novamente em instantes.", context: null };
-    if (message.includes("402")) return { answer: "Os créditos de IA do projeto acabaram.", context: null };
-    return { answer: "Não consegui falar com a IA agora. Tente novamente.", context: null };
-  }
-}
