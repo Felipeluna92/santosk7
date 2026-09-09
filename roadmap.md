@@ -9,4 +9,4 @@
 - [x] Build account growth and virality health scoring (0–100)
 - [x] Add per-account diagnostics and actionable recommendations
 - [x] Verify core screens on desktop and mobile
-- [ ] Redesign publishing as a library-first workspace with clearer actions
+- [x] Redesign publishing as a library-first workspace with clearer actions
