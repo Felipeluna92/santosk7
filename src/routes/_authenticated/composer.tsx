@@ -10,10 +10,14 @@ import {
   Layers,
   CircleDot,
   FileText,
-  Info,
   Copy,
   Plus,
   X,
+  Clock3,
+  CheckCircle2,
+  Library,
+  Sparkles,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,7 +38,6 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { accountsQuery, postsQuery, POST_STATUS, fmtDate } from "@/lib/data";
 import { publishPost } from "@/lib/meta.functions";
-import { MediaUpload } from "@/components/MediaUpload";
 import { MediaPicker } from "@/components/MediaPicker";
 import { CaptionPicker } from "@/components/CaptionPicker";
 import { PresetBar } from "@/components/PresetBar";
@@ -115,9 +118,11 @@ function Composer() {
       toast.success(`${clean.length} mídias — virou carrossel automaticamente.`);
       return;
     }
+    const url = clean[0] as string;
     setCarousel("");
-    setMediaUrl(clean[0] as string);
-    setType((prev) => (prev === "CAROUSEL" ? "POST" : prev));
+    setMediaUrl(url);
+    if (platform === "instagram" && /\.(mp4|mov)(?:\?|$)/i.test(url)) setType("REEL");
+    else setType((prev) => (prev === "CAROUSEL" || prev === "REEL" ? "POST" : prev));
   };
 
   const isThreads = platform === "threads";
@@ -293,6 +298,16 @@ function Composer() {
 
 
   const busy = draftMutation.isPending || scheduleMutation.isPending || publishMutation.isPending;
+
+  const setHoursAhead = (hours: number) => {
+    const d = new Date(Date.now() + hours * 60 * 60_000);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setSchedDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+    setSchedTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
+  };
+
+  const detectedType = type === "CAROUSEL" ? "Carrossel" : type === "REEL" ? "Reel" : type === "STORY" ? "Story" : isThreads ? "Thread" : "Post";
+  const mediaCount = type === "CAROUSEL" ? carouselUrls.length : mediaUrl ? 1 : 0;
 
   return (
     <AppShell title="Publicar" subtitle="Criação, duplicação e agendamento em vários horários">
