@@ -479,6 +479,60 @@ export type Database = {
           },
         ]
       }
+      post_presets: {
+        Row: {
+          account_ids: string[]
+          caption: string | null
+          caption_variants: string[]
+          carousel_urls: string[]
+          cover_url: string | null
+          created_at: string
+          default_time: string | null
+          hashtags: string | null
+          id: string
+          media_url: string | null
+          name: string
+          platform: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_ids?: string[]
+          caption?: string | null
+          caption_variants?: string[]
+          carousel_urls?: string[]
+          cover_url?: string | null
+          created_at?: string
+          default_time?: string | null
+          hashtags?: string | null
+          id?: string
+          media_url?: string | null
+          name: string
+          platform?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          account_ids?: string[]
+          caption?: string | null
+          caption_variants?: string[]
+          carousel_urls?: string[]
+          cover_url?: string | null
+          created_at?: string
+          default_time?: string | null
+          hashtags?: string | null
+          id?: string
+          media_url?: string | null
+          name?: string
+          platform?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           account_id: string | null
