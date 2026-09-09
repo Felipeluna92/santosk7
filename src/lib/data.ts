@@ -21,6 +21,20 @@ export const foldersQuery = {
   },
 };
 
+export type PostPreset = Tables<"post_presets">;
+
+export const presetsQuery = {
+  queryKey: ["post-presets"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("post_presets")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data as PostPreset[];
+  },
+};
+
 export const captionsQuery = {
   queryKey: ["caption-templates"],
   queryFn: async () => {

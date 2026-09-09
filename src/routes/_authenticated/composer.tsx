@@ -37,6 +37,7 @@ import { publishPost } from "@/lib/meta.functions";
 import { MediaUpload } from "@/components/MediaUpload";
 import { MediaPicker } from "@/components/MediaPicker";
 import { CaptionPicker } from "@/components/CaptionPicker";
+import { PresetBar } from "@/components/PresetBar";
 import { StoryEditor } from "@/components/StoryEditor";
 
 export const Route = createFileRoute("/_authenticated/composer")({
@@ -300,6 +301,33 @@ function Composer() {
           </button>
         ))}
       </div>
+
+      <PresetBar
+        platform={platform}
+        current={() => ({
+          platform,
+          type,
+          account_ids: accountIds,
+          caption: caption || null,
+          caption_variants: captionVariants,
+          hashtags: hashtags || null,
+          media_url: mediaUrl || null,
+          cover_url: coverUrl || null,
+          carousel_urls: carouselUrls,
+          default_time: schedTime || null,
+        })}
+        onApply={(p) => {
+          setType((p.type as typeof type) ?? "POST");
+          setAccountIds(p.account_ids ?? []);
+          setCaption(p.caption ?? "");
+          setCaptionVariants(p.caption_variants ?? []);
+          setHashtags(p.hashtags ?? "");
+          setMediaUrl(p.media_url ?? "");
+          setCoverUrl(p.cover_url ?? "");
+          setCarousel((p.carousel_urls ?? []).join("\n"));
+          if (p.default_time) setSchedTime(p.default_time);
+        }}
+      />
 
       <Tabs value={type} onValueChange={(v) => setType(v as typeof type)}>
         <TabsList
@@ -624,6 +652,29 @@ function Composer() {
                   </div>
                 </div>
 
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: "Em 15 min", ms: 15 * 60_000 },
+                    { label: "Em 1 hora", ms: 60 * 60_000 },
+                    { label: "Em 3 horas", ms: 3 * 60 * 60_000 },
+                    { label: "Amanhã, mesma hora", ms: 24 * 60 * 60_000 },
+                  ].map((q) => (
+                    <button
+                      key={q.label}
+                      type="button"
+                      onClick={() => {
+                        const d = new Date(Date.now() + q.ms);
+                        const pad = (n: number) => String(n).padStart(2, "0");
+                        setSchedDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+                        setSchedTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
+                      }}
+                      className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                    >
+                      {q.label}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <Label className="text-xs">Repetir este conteúdo em outros horários</Label>
@@ -701,7 +752,7 @@ function Composer() {
                   </div>
                 ) : null}
 
-                <div className="flex flex-wrap gap-2">
+                <div className="sticky bottom-2 z-10 flex flex-wrap gap-2 rounded-lg border border-border bg-surface/95 p-2 backdrop-blur">
                   <Button variant="secondary" size="sm" disabled={busy} onClick={() => draftMutation.mutate()}>
                     <Save className="h-4 w-4" /> Salvar rascunho
                   </Button>
