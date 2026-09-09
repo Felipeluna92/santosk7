@@ -266,7 +266,7 @@ async function syncInstagramAccount(
             permalink?: string;
             timestamp?: string;
           }[]
-        | undefined) ?? []) ?? [];
+        | undefined) ?? []);
     for (const item of items.slice(0, limitPerAccount)) {
       const bag = await mediaInsights(item.id, token, env.graphVersion);
       const publishedAt = item.timestamp ? new Date(item.timestamp).toISOString() : null;
