@@ -176,27 +176,6 @@ export type Database = {
         }
         Relationships: []
       }
-      cron_job_locks: {
-        Row: {
-          expires_at: string
-          job_name: string
-          started_at: string
-          token: string
-        }
-        Insert: {
-          expires_at: string
-          job_name: string
-          started_at?: string
-          token: string
-        }
-        Update: {
-          expires_at?: string
-          job_name?: string
-          started_at?: string
-          token?: string
-        }
-        Relationships: []
-      }
       ig_media: {
         Row: {
           account_id: string
@@ -557,7 +536,6 @@ export type Database = {
       posts: {
         Row: {
           account_id: string | null
-          attempt_count: number
           caption: string | null
           carousel_urls: string[]
           cover_url: string | null
@@ -565,13 +543,10 @@ export type Database = {
           error_message: string | null
           hashtags: string | null
           id: string
-          last_attempt_at: string | null
           media_url: string | null
           meta_container_id: string | null
           meta_media_id: string | null
-          next_retry_at: string | null
           platform: string
-          processing_started_at: string | null
           published_at: string | null
           scheduled_at: string | null
           status: string
@@ -581,7 +556,6 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
-          attempt_count?: number
           caption?: string | null
           carousel_urls?: string[]
           cover_url?: string | null
@@ -589,13 +563,10 @@ export type Database = {
           error_message?: string | null
           hashtags?: string | null
           id?: string
-          last_attempt_at?: string | null
           media_url?: string | null
           meta_container_id?: string | null
           meta_media_id?: string | null
-          next_retry_at?: string | null
           platform?: string
-          processing_started_at?: string | null
           published_at?: string | null
           scheduled_at?: string | null
           status?: string
@@ -605,7 +576,6 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
-          attempt_count?: number
           caption?: string | null
           carousel_urls?: string[]
           cover_url?: string | null
@@ -613,13 +583,10 @@ export type Database = {
           error_message?: string | null
           hashtags?: string | null
           id?: string
-          last_attempt_at?: string | null
           media_url?: string | null
           meta_container_id?: string | null
           meta_media_id?: string | null
-          next_retry_at?: string | null
           platform?: string
-          processing_started_at?: string | null
           published_at?: string | null
           scheduled_at?: string | null
           status?: string
@@ -780,31 +747,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      acquire_cron_lock: {
-        Args: {
-          p_job_name: string
-          p_ttl_seconds?: number
-        }
-        Returns: string
-      }
-      claim_post_for_publish: {
-        Args: {
-          p_owner_id: string
-          p_post_id: string
-          p_statuses: string[]
-        }
-        Returns: {
-          attempt_count: number
-          claimed: boolean
-        }[]
-      }
-      release_cron_lock: {
-        Args: {
-          p_job_name: string
-          p_token: string
-        }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
