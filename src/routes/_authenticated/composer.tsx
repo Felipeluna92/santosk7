@@ -731,17 +731,17 @@ function Composer() {
                       size="sm"
                       variant="secondary"
                       onClick={() => {
-                        if (!newTime) return;
-                        if (!schedDate) {
-                          toast.error("Escolha a data primeiro.");
+                        const day = newDate || schedDate;
+                        if (!newTime || !day) {
+                          toast.error("Escolha a data e o horário.");
                           return;
                         }
-                        const value = `${schedDate}T${newTime}`;
+                        const value = `${day}T${newTime}`;
                         if (allTimes.includes(value)) {
                           toast.error("Esse horário já está na lista.");
                           return;
                         }
-                        setExtraTimes((prev) => [...prev, value]);
+                        setExtraTimes((prev) => [...prev, value].sort());
                         setNewTime("");
                       }}
                     >
