@@ -12,6 +12,7 @@ export type LooseFilter = {
   eq: (column: string, value: unknown) => LooseFilter & LooseResult;
   select: (columns?: string) => LooseFilter & LooseResult;
   maybeSingle: () => LooseResult;
+  single: () => LooseResult;
 };
 
 export type LooseTable = {
