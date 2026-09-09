@@ -408,15 +408,15 @@ async function claimPostForPublish(
   const pipeline = await publishPipelineEnabled();
 
   if (pipeline) {
-    const res = await supabaseAdmin.rpc("claim_post_for_publish", {
+    const res = await (supabaseAdmin as unknown as LooseRpc).rpc("claim_post_for_publish", {
       p_post_id: postId,
       p_owner_id: ownerId,
       p_statuses: [...allowed],
     });
     if (!res.error) {
-      const row = (res.data ?? [])[0];
+      const row = ((res.data as { claimed?: boolean; attempt_count?: number }[] | null) ?? [])[0];
       return row?.claimed
-        ? { ok: true, attempt: row.attempt_count, pipeline: true }
+        ? { ok: true, attempt: row.attempt_count ?? 0, pipeline: true }
         : { ok: false, attempt: 0, pipeline: true };
     }
     console.error("[publish] claim via RPC falhou; usando claim simples", res.error.message);
@@ -462,9 +462,8 @@ async function waitForContainer(containerId: string, token: string, version: str
 /** Marca falha definitiva, limpando os campos de retry quando o pipeline existe. */
 async function finalizePostFailure(postId: string, ownerId: string, pipeline: boolean, message: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const extra = pipeline ? { next_retry_at: null, processing_started_at: null } : {};
-  await supabaseAdmin
-    .from("posts")
+  const extra: Record<string, unknown> = pipeline ? { next_retry_at: null, processing_started_at: null } : {};
+  await (supabaseAdmin.from("posts") as unknown as LooseTable)
     .update({ status: POST_STATUS_FAILED, error_message: message, ...extra })
     .eq("id", postId)
     .eq("user_id", ownerId);
@@ -480,8 +479,7 @@ async function schedulePostRetry(postId: string, ownerId: string, attempt: numbe
   const minutes =
     RETRY_BACKOFF_MINUTES[Math.min(attempt, RETRY_BACKOFF_MINUTES.length) - 1] ??
     RETRY_BACKOFF_MINUTES[RETRY_BACKOFF_MINUTES.length - 1]!;
-  await supabaseAdmin
-    .from("posts")
+  await (supabaseAdmin.from("posts") as unknown as LooseTable)
     .update({
       status: POST_STATUS_RETRYING,
       error_message: message,
@@ -1105,7 +1103,7 @@ async function legacyFetchPostsMetrics(userId: string, days = 30) {
 
   return {
     posts,
-    series: Array.from(byDay.entries()).map(([day, v]) => ({ day, ...v })),
+    series: Array.from(byDay.entries()).map(([day, v]) => ({ ...v, day })),
     totals: {
       views: posts.reduce((a, p) => a + (p.views ?? 0), 0),
       likes: posts.reduce((a, p) => a + (p.likes ?? 0), 0),
@@ -1291,21 +1289,6 @@ export async function fetchInsightsTimeseries(userId: string, days = 30) {
   return readDailySeries(userId, "instagram", days);
 }
 
-export type PostMetric = {
-  id: string;
-  accountId: string;
-  username: string;
-  caption: string;
-  mediaType: string;
-  thumbnail: string | null;
-  permalink: string | null;
-  timestamp: string;
-  views: number | null;
-  likes: number | null;
-  shares: number | null;
-  comments: number | null;
-  reach: number | null;
-};
 
 type StoredMediaRow = {
   id: string;
@@ -1383,7 +1366,7 @@ export async function fetchPostsMetrics(userId: string, days = 30) {
   return {
     posts,
     series: Array.from(byDay.entries())
-      .map(([day, v]) => ({ day, ...v }))
+      .map(([day, v]) => ({ ...v, day }))
       .sort((a, b) => a.day.localeCompare(b.day)),
     totals: {
       views: sumPresent(posts, "views"),

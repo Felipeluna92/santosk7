@@ -489,7 +489,7 @@ async function legacyFetchThreadsPostsMetrics(userId: string, days = 30) {
 
   return {
     posts,
-    series: Array.from(byDay.entries()).map(([day, v]) => ({ day, ...v })),
+    series: Array.from(byDay.entries()).map(([day, v]) => ({ ...v, day })),
     totals: {
       views: posts.reduce((a, p) => a + (p.views ?? 0), 0),
       likes: posts.reduce((a, p) => a + (p.likes ?? 0), 0),
@@ -563,7 +563,7 @@ export async function fetchThreadsPostsMetrics(userId: string, days = 30) {
   return {
     posts,
     series: Array.from(byDay.entries())
-      .map(([day, v]) => ({ day, ...v }))
+      .map(([day, v]) => ({ ...v, day }))
       .sort((a, b) => a.day.localeCompare(b.day)),
     totals: {
       views: sum("views"),
@@ -715,8 +715,7 @@ export async function syncThreadsInsights(
           const unavailable: string[] = Object.entries(bag)
             .filter(([, v]) => v === null)
             .map(([k]) => k);
-          const { data: row } = await supabaseAdmin
-            .from("ig_media")
+          const { data: row } = await (supabaseAdmin.from("ig_media") as unknown as LooseTable)
             .upsert(
               {
                 user_id: userId,

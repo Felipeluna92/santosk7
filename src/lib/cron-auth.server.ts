@@ -63,7 +63,7 @@ export async function runCronJob(
   ttlSeconds = 240,
 ): Promise<Response> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const acquire = await supabaseAdmin.rpc("acquire_cron_lock", {
+  const acquire = await (supabaseAdmin as unknown as LooseRpc).rpc("acquire_cron_lock", {
     p_job_name: jobName,
     p_ttl_seconds: ttlSeconds,
   });
@@ -96,10 +96,13 @@ export async function runCronJob(
     console.error(`[cron:${jobName}] erro`, message);
     return Response.json({ success: false, error: message }, { status: 500 });
   } finally {
-    await supabaseAdmin
-      .rpc("release_cron_lock", { p_job_name: jobName, p_token: token })
-      .catch((err: unknown) => {
-        console.error(`[cron:${jobName}] falha ao liberar lock`, err);
+    try {
+      await (supabaseAdmin as unknown as LooseRpc).rpc("release_cron_lock", {
+        p_job_name: jobName,
+        p_token: token,
       });
+    } catch (err) {
+      console.error(`[cron:${jobName}] falha ao liberar lock`, err);
+    }
   }
 }
