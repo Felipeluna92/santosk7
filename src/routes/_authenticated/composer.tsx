@@ -102,6 +102,23 @@ function Composer() {
   const [schedTime, setSchedTime] = useState("");
   const [extraTimes, setExtraTimes] = useState<string[]>([]);
   const [newTime, setNewTime] = useState("");
+  const [newDate, setNewDate] = useState("");
+
+  /** Escolha de mídia inteligente: 2+ arquivos viram carrossel, 1 volta a ser post simples. */
+  const applyMediaSelection = (urls: string[]) => {
+    const clean = urls.filter(Boolean);
+    if (clean.length === 0) return;
+    if (clean.length > 1) {
+      setCarousel(clean.join("\n"));
+      setMediaUrl("");
+      setType("CAROUSEL");
+      toast.success(`${clean.length} mídias — virou carrossel automaticamente.`);
+      return;
+    }
+    setCarousel("");
+    setMediaUrl(clean[0] as string);
+    setType((prev) => (prev === "CAROUSEL" ? "POST" : prev));
+  };
 
   const isThreads = platform === "threads";
   const accountList = (accounts.data ?? []).filter((a) => (a.platform ?? "instagram") === platform);
@@ -481,9 +498,11 @@ function Composer() {
                       <MediaPicker
                         multiple
                         label="Escolher da biblioteca"
-                        onSelect={(urls) =>
-                          setCarousel((prev) => [...prev.split("\n").filter(Boolean), ...urls].join("\n"))
-                        }
+                        onSelect={(urls) => {
+                          const all = [...carousel.split("\n").filter(Boolean), ...urls.filter(Boolean)];
+                          if (all.length === 1) applyMediaSelection(all);
+                          else setCarousel(all.join("\n"));
+                        }}
                       />
                     </div>
                     <Textarea
@@ -510,9 +529,10 @@ function Composer() {
                       }
                     />
                     <MediaPicker
-                      kind={t === "REEL" ? "VIDEO" : "IMAGE"}
-                      label="Escolher da biblioteca"
-                      onSelect={(urls) => urls[0] && setMediaUrl(urls[0])}
+                      multiple={t !== "REEL"}
+                      {...(t === "REEL" ? { kind: "VIDEO" as const } : {})}
+                      label={t === "REEL" ? "Escolher da biblioteca" : "Escolher da biblioteca (2+ viram carrossel)"}
+                      onSelect={(urls) => (t === "REEL" ? urls[0] && setMediaUrl(urls[0]) : applyMediaSelection(urls))}
                     />
                     {t === "REEL" ? (
                       <MediaUpload
@@ -677,22 +697,28 @@ function Composer() {
 
                 <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <Label className="text-xs">Repetir este conteúdo em outros horários</Label>
+                    <Label className="text-xs">Agendar em vários dias e horários</Label>
                     <span className="text-[11px] text-muted-foreground">
                       {allTimes.length} agendamento(s)
                     </span>
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Mesma legenda, hashtags, mídia e capa — uma cópia agendada para cada horário.
+                    Mesma legenda, hashtags, mídia e capa — uma cópia agendada para cada data/horário da lista.
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Input
+                      type="date"
+                      value={newDate || schedDate}
+                      onChange={(e) => setNewDate(e.target.value)}
+                      className="w-40 bg-background"
+                    />
                     <Input
                       type="time"
                       step={60}
                       list="sk7-time-slots"
                       value={newTime}
                       onChange={(e) => setNewTime(e.target.value)}
-                      className="bg-background"
+                      className="w-32 bg-background"
                     />
                     <datalist id="sk7-time-slots">
                       {TIME_SLOTS.map((s) => (
@@ -705,17 +731,17 @@ function Composer() {
                       size="sm"
                       variant="secondary"
                       onClick={() => {
-                        if (!newTime) return;
-                        if (!schedDate) {
-                          toast.error("Escolha a data primeiro.");
+                        const day = newDate || schedDate;
+                        if (!newTime || !day) {
+                          toast.error("Escolha a data e o horário.");
                           return;
                         }
-                        const value = `${schedDate}T${newTime}`;
+                        const value = `${day}T${newTime}`;
                         if (allTimes.includes(value)) {
                           toast.error("Esse horário já está na lista.");
                           return;
                         }
-                        setExtraTimes((prev) => [...prev, value]);
+                        setExtraTimes((prev) => [...prev, value].sort());
                         setNewTime("");
                       }}
                     >
