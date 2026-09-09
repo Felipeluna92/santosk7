@@ -301,6 +301,33 @@ function Composer() {
         ))}
       </div>
 
+      <PresetBar
+        platform={platform}
+        current={() => ({
+          platform,
+          type,
+          account_ids: accountIds,
+          caption: caption || null,
+          caption_variants: captionVariants,
+          hashtags: hashtags || null,
+          media_url: mediaUrl || null,
+          cover_url: coverUrl || null,
+          carousel_urls: carouselUrls,
+          default_time: schedTime || null,
+        })}
+        onApply={(p) => {
+          setType((p.type as typeof type) ?? "POST");
+          setAccountIds(p.account_ids ?? []);
+          setCaption(p.caption ?? "");
+          setCaptionVariants(p.caption_variants ?? []);
+          setHashtags(p.hashtags ?? "");
+          setMediaUrl(p.media_url ?? "");
+          setCoverUrl(p.cover_url ?? "");
+          setCarousel((p.carousel_urls ?? []).join("\n"));
+          if (p.default_time) setSchedTime(p.default_time);
+        }}
+      />
+
       <Tabs value={type} onValueChange={(v) => setType(v as typeof type)}>
         <TabsList
           className={`grid w-full gap-1 bg-surface px-1 sm:inline-flex sm:w-auto ${isThreads ? "grid-cols-3" : "grid-cols-5"}`}
