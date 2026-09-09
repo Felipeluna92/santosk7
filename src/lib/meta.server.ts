@@ -1,6 +1,15 @@
 // Server-only helpers for the official Meta / Instagram Graph API.
 // Never import this from client code.
 
+import {
+  MANUAL_PUBLISH_CLAIMABLE,
+  POST_STATUS_FAILED,
+  POST_STATUS_PUBLISHING,
+  POST_STATUS_RETRYING,
+  POST_STATUS_SCHEDULED,
+  SCHEDULER_QUEUE_STATUSES,
+} from "./domain";
+
 const REDACT_KEYS = ["access_token", "authorization", "secret", "password", "refresh_token"];
 
 export function redact(value: unknown): unknown {
@@ -350,6 +359,90 @@ async function createContainer(
 /** Marker for failures that should be retried on the next scheduler run. */
 const RETRY_MARK = "__RETRY__";
 
+// ---------------------------------------------------------------------------
+// Pipeline de publicação: tentativas, retry progressivo e idempotência.
+// ---------------------------------------------------------------------------
+
+/** Máximo de tentativas de publicação antes de marcar falha definitiva. */
+export const MAX_PUBLISH_ATTEMPTS = 4;
+/** Espera progressiva (min) após as tentativas 1, 2 e 3. */
+const RETRY_BACKOFF_MINUTES = [2, 10, 30];
+/** Post em `publishing` por mais tempo que isso é considerado travado. */
+const PUBLISHING_STALE_MS = 2 * 60 * 1000;
+
+let pipelineColumnsAvailable: boolean | null = null;
+
+/** Detecta (uma vez) se o banco já recebeu as colunas do pipeline de publicação. */
+export async function publishPipelineEnabled(): Promise<boolean> {
+  if (pipelineColumnsAvailable !== null) return pipelineColumnsAvailable;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("posts").select("attempt_count, next_retry_at").limit(1);
+    pipelineColumnsAvailable = !error;
+  } catch {
+    pipelineColumnsAvailable = false;
+  }
+  if (!pipelineColumnsAvailable) {
+    console.warn("[publish] Colunas de pipeline ausentes em posts — aplique a migration de publish pipeline.");
+  }
+  return pipelineColumnsAvailable;
+}
+
+export type PublishClaim = { ok: boolean; attempt: number; pipeline: boolean };
+
+/**
+ * Claim atômico de um post para publicação. Apenas um worker vence; o perdedor
+ * recebe ok=false e não publica (impede cron A e cron B de publicarem o mesmo
+ * post em paralelo, e também o clique duplo no botão).
+ *
+ * Com o pipeline no banco, usa a função SQL claim_post_for_publish, que faz a
+ * transição e o incremento de attempt_count numa única instrução atômica.
+ * Sem a migration aplicada, degrada para um claim condicional simples.
+ */
+async function claimPostForPublish(
+  postId: string,
+  ownerId: string,
+  allowed: readonly string[],
+): Promise<PublishClaim> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const pipeline = await publishPipelineEnabled();
+
+  if (pipeline) {
+    const res = await supabaseAdmin.rpc("claim_post_for_publish", {
+      p_post_id: postId,
+      p_owner_id: ownerId,
+      p_statuses: [...allowed],
+    });
+    if (!res.error) {
+      const row = (res.data ?? [])[0];
+      return row?.claimed
+        ? { ok: true, attempt: row.attempt_count, pipeline: true }
+        : { ok: false, attempt: 0, pipeline: true };
+    }
+    console.error("[publish] claim via RPC falhou; usando claim simples", res.error.message);
+  }
+
+  const { data } = await supabaseAdmin
+    .from("posts")
+    .update({ status: POST_STATUS_PUBLISHING, error_message: null })
+    .eq("id", postId)
+    .eq("user_id", ownerId)
+    .in("status", [...allowed])
+    .select("id")
+    .maybeSingle();
+  return data ? { ok: true, attempt: 1, pipeline: false } : { ok: false, attempt: 0, pipeline: false };
+}
+
+/** Erros que merecem nova tentativa em vez de virar FAILED na hora. */
+function isTransientPublishError(rawMessage: string): boolean {
+  return (
+    rawMessage.startsWith(RETRY_MARK) ||
+    /not ready|not available|ainda processando|still processing|fetch failed|timeout|indispon|temporarily|ECONN|ETIMEDOUT/i.test(
+      rawMessage,
+    )
+  );
+}
+
 async function waitForContainer(containerId: string, token: string, version: string, tries = 6) {
   for (let i = 0; i < tries; i++) {
     const json = await graph(
@@ -366,6 +459,79 @@ async function waitForContainer(containerId: string, token: string, version: str
 }
 
 
+/** Marca falha definitiva, limpando os campos de retry quando o pipeline existe. */
+async function finalizePostFailure(postId: string, ownerId: string, pipeline: boolean, message: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const extra = pipeline ? { next_retry_at: null, processing_started_at: null } : {};
+  await supabaseAdmin
+    .from("posts")
+    .update({ status: POST_STATUS_FAILED, error_message: message, ...extra })
+    .eq("id", postId)
+    .eq("user_id", ownerId);
+}
+
+/**
+ * Agenda retry progressivo (2, 10, 30 min). Devolve true se agendou; false se
+ * as tentativas acabaram (o chamador deve marcar falha definitiva).
+ */
+async function schedulePostRetry(postId: string, ownerId: string, attempt: number, message: string): Promise<boolean> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  if (attempt >= MAX_PUBLISH_ATTEMPTS) return false;
+  const minutes =
+    RETRY_BACKOFF_MINUTES[Math.min(attempt, RETRY_BACKOFF_MINUTES.length) - 1] ??
+    RETRY_BACKOFF_MINUTES[RETRY_BACKOFF_MINUTES.length - 1]!;
+  await supabaseAdmin
+    .from("posts")
+    .update({
+      status: POST_STATUS_RETRYING,
+      error_message: message,
+      next_retry_at: new Date(Date.now() + minutes * 60_000).toISOString(),
+      processing_started_at: null,
+    })
+    .eq("id", postId)
+    .eq("user_id", ownerId);
+  return true;
+}
+
+/**
+ * Decide o destino de um post após falha na tentativa de publicação:
+ * - erro temporário + tentativas restantes -> retrying com retry progressivo;
+ * - migration ainda não aplicada          -> comportamento legado (reenfileira);
+ * - erro definitivo (ou tentativas no fim)-> failed + relança para a UI ver.
+ */
+async function handlePublishAttemptError(postId: string, ownerId: string, claim: PublishClaim, e: unknown) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const raw = e instanceof Error ? e.message : "Falha desconhecida ao publicar.";
+  const message = raw.replace(RETRY_MARK, "").trim() || "Falha ao publicar.";
+  const transient = isTransientPublishError(raw);
+
+  if (transient && !claim.pipeline) {
+    // Migration pendente: mantém o comportamento anterior (reenfileira para o próximo ciclo).
+    await supabaseAdmin
+      .from("posts")
+      .update({ status: POST_STATUS_SCHEDULED, error_message: null })
+      .eq("id", postId)
+      .eq("user_id", ownerId);
+    await writeLog(ownerId, "publish", "warn", message, { postId });
+    return { ok: false as const, skipped: true as const, retry: true as const };
+  }
+
+  if (transient && (await schedulePostRetry(postId, ownerId, claim.attempt, message))) {
+    await writeLog(
+      ownerId,
+      "publish",
+      "warn",
+      `Tentativa ${claim.attempt} falhou (temporário). Nova tentativa agendada.`,
+      { postId, message },
+    );
+    return { ok: false as const, skipped: true as const, retry: true as const };
+  }
+
+  await finalizePostFailure(postId, ownerId, claim.pipeline, message);
+  await writeLog(ownerId, "publish", "error", message, { postId, attempt: claim.attempt });
+  throw new Error(message);
+}
+
 export async function publishPostById(postId: string, userId?: string) {
   const env = readMetaEnv();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -374,9 +540,17 @@ export async function publishPostById(postId: string, userId?: string) {
   if (!post) throw new Error("Post não encontrado.");
   const ownerId = post.user_id;
 
+  // Lock idempotente: se outra execução (cron concorrente ou clique duplo) já
+  // assumiu esta publicação, sai sem publicar de novo — nunca dois workers
+  // publicam o mesmo post ao mesmo tempo.
+  const claim = await claimPostForPublish(postId, ownerId, MANUAL_PUBLISH_CLAIMABLE);
+  if (!claim.ok) {
+    return { ok: false as const, skipped: true as const, retry: false as const };
+  }
+
   /** Falhas de pré-checagem precisam marcar o post, senão ele trava a fila para sempre. */
   const abort = async (message: string) => {
-    await supabaseAdmin.from("posts").update({ status: "failed", error_message: message }).eq("id", postId).eq("user_id", ownerId);
+    await finalizePostFailure(postId, ownerId, claim.pipeline, message);
     await writeLog(ownerId, "publish", "error", message, { postId });
     throw new Error(message);
   };
