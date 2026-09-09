@@ -752,7 +752,7 @@ function Composer() {
                   </div>
                 ) : null}
 
-                <div className="flex flex-wrap gap-2">
+                <div className="sticky bottom-2 z-10 flex flex-wrap gap-2 rounded-lg border border-border bg-surface/95 p-2 backdrop-blur">
                   <Button variant="secondary" size="sm" disabled={busy} onClick={() => draftMutation.mutate()}>
                     <Save className="h-4 w-4" /> Salvar rascunho
                   </Button>
