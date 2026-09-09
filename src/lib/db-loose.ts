@@ -16,6 +16,7 @@ export type LooseFilter = {
 };
 
 export type LooseTable = {
+  select: (columns?: string) => LooseFilter & LooseResult;
   update: (values: Record<string, unknown>) => LooseFilter;
   insert: (values: Record<string, unknown> | Record<string, unknown>[]) => LooseFilter;
   upsert: (
@@ -23,3 +24,4 @@ export type LooseTable = {
     options?: Record<string, unknown>,
   ) => LooseFilter;
 };
+
