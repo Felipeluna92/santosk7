@@ -67,6 +67,23 @@ export async function buildAccountIntelligence(userId: string, accountId: string
 
   const unavailable = [...new Set(rows.flatMap((r) => r.unavailable_metrics ?? []))];
 
+  // Taxas sobre alcance calculadas apenas nos posts que têm alcance + a métrica.
+  // Antes, "total de interações" incluía posts sem alcance (e zeros no lugar de
+  // métrica ausente), o que distorcia o engajamento — especialmente em contas
+  // com muitos Reels, que não devolvem alcance por publicação.
+  const reachable = analyzed.filter((a) => a.reach !== null);
+  const interactionsOf = (media: (typeof analyzed)[number]): number | null => {
+    if (typeof media.total_interactions === "number") return media.total_interactions;
+    const parts = [media.likes, media.comments, media.shares].filter((v): v is number => typeof v === "number");
+    return parts.length ? parts.reduce((a, b) => a + b, 0) : null;
+  };
+  const ratePerReach = (pick: (media: (typeof analyzed)[number]) => number | null) => {
+    const withBoth = reachable.filter((media) => pick(media) !== null);
+    const numerator = mean(withBoth.map((media) => pick(media) as number));
+    const denominator = mean(withBoth.map((media) => media.reach as number));
+    return ratio(numerator, denominator);
+  };
+
   return {
     accountId,
     postsAnalyzed: analyzed.length,
@@ -78,20 +95,11 @@ export async function buildAccountIntelligence(userId: string, accountId: string
     weeklyFrequency: weeklyFrequency(scored),
     calculated: {
       medianViews: median(analyzed.map((a) => a.views as number)),
-      medianReach: median(analyzed.filter((a) => a.reach !== null).map((a) => a.reach as number)),
+      medianReach: median(reachable.map((a) => a.reach as number)),
       viewsPerFollower: ratio(median(analyzed.map((a) => a.views as number)), followers),
-      engagementPerReach: ratio(
-        mean(analyzed.map((a) => a.total_interactions ?? 0)),
-        mean(analyzed.filter((a) => a.reach !== null).map((a) => a.reach as number)),
-      ),
-      savesPerReach: ratio(
-        mean(analyzed.map((a) => a.saved ?? 0)),
-        mean(analyzed.filter((a) => a.reach !== null).map((a) => a.reach as number)),
-      ),
-      sharesPerReach: ratio(
-        mean(analyzed.map((a) => a.shares ?? 0)),
-        mean(analyzed.filter((a) => a.reach !== null).map((a) => a.reach as number)),
-      ),
+      engagementPerReach: ratePerReach(interactionsOf),
+      savesPerReach: ratePerReach((media) => media.saved),
+      sharesPerReach: ratePerReach((media) => media.shares),
     },
     heatmap,
     bestSlots: bestSlots(heatmap),

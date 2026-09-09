@@ -1182,9 +1182,11 @@ export async function dailyMetricRows(
 }
 
 /**
- * Soma oficial de uma métrica de conta em janelas de dias *completos* (ontem
- * para trás). Devolve também quantos dias da janela tinham dado real, para a
- * interface nunca tratar ausência como zero.
+ * Soma oficial de uma métrica de conta nos últimos `days` dias *incluindo o dia
+ * atual* (o que a API já devolveu de hoje). Assim, logo após uma sincronização o
+ * painel já mostra números — do mesmo jeito que o app do Instagram apresenta.
+ * Devolve também quantos dias da janela tinham dado real, para a interface nunca
+ * tratar ausência como zero.
  */
 export function aggregateDailyWindow(
   rows: DailyMetricRow[],
@@ -1193,11 +1195,8 @@ export function aggregateDailyWindow(
   days: number,
 ): { value: number | null; daysAvailable: number; daysExpected: number } {
   const today = todayUtc();
-  const from = shiftDay(today, -days);
-  const lastComplete = shiftDay(today, -1);
-  const mine = rows.filter(
-    (r) => r.account_id === accountId && r.day >= from && r.day <= lastComplete,
-  );
+  const from = shiftDay(today, -(days - 1));
+  const mine = rows.filter((r) => r.account_id === accountId && r.day >= from && r.day <= today);
   let sum = 0;
   let available = 0;
   for (const row of mine) {
@@ -1221,26 +1220,46 @@ export function latestFollowers(rows: DailyMetricRow[], accountId: string): numb
 /** Série diária (views + seguidores) somada por dia entre as contas da plataforma. */
 export async function readDailySeries(userId: string, platform: "instagram" | "threads", days: number) {
   const accounts = await accountsForPlatform(userId, platform);
-  const rows = await dailyMetricRows(userId, accounts.map((a) => a.id), shiftDay(todayUtc(), -days));
-  const byDay = new Map<string, { views: number; followers: number | null; day: string }>();
-  let available = false;
+  const fromDay = shiftDay(todayUtc(), -(days - 1));
+  const rows = await dailyMetricRows(
+    userId,
+    accounts.map((a) => a.id),
+    fromDay,
+  );
+  const perAccount = new Map<string, DailyMetricRow[]>();
   for (const row of rows) {
-    const entry = byDay.get(row.day) ?? { day: row.day, views: 0, followers: null as number | null };
-    if (typeof row.views === "number") {
-      entry.views += row.views;
-      available = true;
-    }
-    if (typeof row.followers === "number") {
-      entry.followers = entry.followers === null ? row.followers : Math.max(entry.followers, row.followers);
-    }
-    byDay.set(row.day, entry);
+    const list = perAccount.get(row.account_id) ?? [];
+    list.push(row);
+    perAccount.set(row.account_id, list);
   }
-  return {
-    available,
-    points: Array.from(byDay.values())
-      .sort((a, b) => a.day.localeCompare(b.day))
-      .map((p) => ({ day: p.day, views: p.views, followers: p.followers })),
-  };
+  for (const list of perAccount.values()) list.sort((a, b) => a.day.localeCompare(b.day));
+
+  const points: { day: string; views: number | null; followers: number | null }[] = [];
+  let available = false;
+  for (let offset = 0; offset < days; offset++) {
+    const day = shiftDay(fromDay, offset);
+    let views: number | null = null;
+    let followers: number | null = null;
+    for (const account of accounts) {
+      const list = perAccount.get(account.id) ?? [];
+      let accountFollowers: number | null = null;
+      let accountViews: number | null = null;
+      for (const row of list) {
+        if (row.day > day) break;
+        // Seguidores: último valor conhecido até o dia (arrasta para frente).
+        if (typeof row.followers === "number") accountFollowers = row.followers;
+        // Views: só soma o valor do próprio dia — ausência nunca vira zero.
+        if (row.day === day && typeof row.views === "number") {
+          accountViews = (accountViews ?? 0) + row.views;
+          available = true;
+        }
+      }
+      if (accountViews !== null) views = (views ?? 0) + accountViews;
+      if (accountFollowers !== null) followers = (followers ?? 0) + accountFollowers;
+    }
+    points.push({ day, views, followers });
+  }
+  return { available, points };
 }
 
 const NO_DATA_MESSAGE =
@@ -1261,7 +1280,7 @@ type AccountInsightRow = {
 /** Resumo por conta do Instagram a partir dos dados oficiais armazenados. */
 export async function fetchAccountsInsights(userId: string): Promise<AccountInsightRow[]> {
   const accounts = await accountsForPlatform(userId, "instagram");
-  const rows = await dailyMetricRows(userId, accounts.map((a) => a.id));
+  const rows = await dailyMetricRows(userId, accounts.map((a) => a.id), shiftDay(todayUtc(), -29));
   return accounts.map((acc) => {
     const w1 = aggregateDailyWindow(rows, acc.id, "views", 1);
     const w7 = aggregateDailyWindow(rows, acc.id, "views", 7);

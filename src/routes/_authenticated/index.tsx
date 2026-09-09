@@ -159,7 +159,7 @@ function Dashboard() {
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
-            label="Views Instagram (24h)"
+            label="Views Instagram hoje"
             value={insights.isLoading ? "…" : hasViews ? nf.format(totalViews) : "—"}
             hint={
               hasViews || has7d || has30d
@@ -195,7 +195,7 @@ function Dashboard() {
           <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Threads</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
-              label="Views Threads (24h)"
+              label="Views Threads hoje"
               value={threadsInsights.isLoading ? "…" : tHasViews ? nf.format(tViews) : "—"}
               hint={
                 tHasViews

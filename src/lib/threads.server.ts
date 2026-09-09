@@ -515,7 +515,7 @@ export async function fetchThreadsAccountsInsights(userId: string) {
   const rows = await dailyMetricRows(
     userId,
     accounts.map((a) => a.id),
-    shiftDay(todayUtc(), -30),
+    shiftDay(todayUtc(), -29),
   );
   return accounts.map((acc) => {
     const w1 = aggregateDailyWindow(rows, acc.id, "views", 1);
@@ -647,7 +647,6 @@ export async function syncThreadsInsights(
         );
         const rows = (res["data"] as Record<string, unknown>[] | undefined) ?? [];
         const viewsRow = rows.find((r) => String(r["name"] ?? "") === "views");
-        const total = (viewsRow?.["total_value"] as { value?: number } | undefined)?.value;
         const values = (viewsRow?.["values"] as { value?: number; end_time?: string }[] | undefined) ?? [];
         if (values.length >= 2) {
           for (const v of values) {
@@ -656,9 +655,10 @@ export async function syncThreadsInsights(
               dayViews.set(day, (dayViews.get(day) ?? 0) + v.value);
             }
           }
-        } else if (typeof total === "number") {
-          dayViews.set(todayUtc(), total);
         }
+        // Se a API devolver só o total do período (sem quebra por dia), NÃO
+        // gravamos esse total como se fosse "hoje": isso corromperia a série
+        // diária e os painéis de 7/30 dias.
       } catch {
         // métrica de views do Threads indisponível — não inventar dado
       }
@@ -710,10 +710,39 @@ export async function syncThreadsInsights(
           }
           const reposts = bag["reposts"];
           const quotes = bag["quotes"];
-          const shares = reposts === null && quotes === null ? null : (reposts ?? 0) + (quotes ?? 0);
           const publishedAt = typeof item["timestamp"] === "string" ? item["timestamp"] : null;
           const mediaType = String(item["media_type"] ?? "TEXT");
-          const unavailable: string[] = Object.entries(bag)
+
+          // Nunca sobrescreve métrica já gravada com null por falha transitória.
+          const { data: previousThread } = await (
+            supabaseAdmin.from("ig_media") as unknown as LooseTable
+          )
+            .select("views, likes, comments, shares")
+            .eq("user_id", userId)
+            .eq("account_id", acc.id)
+            .eq("ig_media_id", threadId)
+            .maybeSingle();
+          const previousThreadRow = (previousThread ?? {}) as {
+            views: number | null;
+            likes: number | null;
+            comments: number | null;
+            shares: number | null;
+          };
+          const threadViews = bag["views"] ?? previousThreadRow.views;
+          const threadLikes = bag["likes"] ?? previousThreadRow.likes;
+          const threadComments = bag["replies"] ?? previousThreadRow.comments;
+          const threadShares =
+            reposts === null && quotes === null
+              ? previousThreadRow.shares
+              : (reposts ?? 0) + (quotes ?? 0);
+          const unavailable: string[] = (
+            [
+              ["views", threadViews],
+              ["likes", threadLikes],
+              ["comments", threadComments],
+              ["shares", threadShares],
+            ] as const
+          )
             .filter(([, v]) => v === null)
             .map(([k]) => k);
           const { data: row } = await (supabaseAdmin.from("ig_media") as unknown as LooseTable)
@@ -730,10 +759,10 @@ export async function syncThreadsInsights(
                 thumbnail_url: (item["thumbnail_url"] as string) ?? (item["media_url"] as string) ?? null,
                 media_url: (item["media_url"] as string) ?? null,
                 published_at: publishedAt,
-                views: bag["views"],
-                likes: bag["likes"],
-                comments: bag["replies"],
-                shares,
+                views: threadViews,
+                likes: threadLikes,
+                comments: threadComments,
+                shares: threadShares,
                 reach: null,
                 saved: null,
                 total_interactions: null,

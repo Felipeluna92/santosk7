@@ -270,6 +270,21 @@ async function syncInstagramAccount(
     for (const item of items.slice(0, limitPerAccount)) {
       const bag = await mediaInsights(item.id, token, env.graphVersion);
       const publishedAt = item.timestamp ? new Date(item.timestamp).toISOString() : null;
+
+      // Busca o que já temos gravado para NUNCA sobrescrever um número bom com
+      // null quando a API falhar de forma transitória (ou não devolver a métrica).
+      const { data: previousMedia } = await supabaseAdmin
+        .from("ig_media")
+        .select("views, reach, likes, comments, shares, saved, total_interactions")
+        .eq("user_id", userId)
+        .eq("account_id", account.id)
+        .eq("ig_media_id", item.id)
+        .maybeSingle();
+      const previous = (previousMedia ?? {}) as Partial<Record<MediaMetric, number | null>>;
+      const metricValue = (metric: MediaMetric): number | null =>
+        bag.values[metric] ?? previous[metric] ?? null;
+      const unavailable = MEDIA_METRICS.filter((metric) => metricValue(metric) === null);
+
       const { data: row } = await supabaseAdmin
         .from("ig_media")
         .upsert(
@@ -286,14 +301,14 @@ async function syncInstagramAccount(
             thumbnail_url: item.thumbnail_url ?? item.media_url ?? null,
             media_url: item.media_url ?? null,
             published_at: publishedAt,
-            views: bag.values.views ?? null,
-            reach: bag.values.reach ?? null,
-            likes: bag.values.likes ?? null,
-            comments: bag.values.comments ?? null,
-            shares: bag.values.shares ?? null,
-            saved: bag.values.saved ?? null,
-            total_interactions: bag.values.total_interactions ?? null,
-            unavailable_metrics: bag.unavailable,
+            views: metricValue("views"),
+            reach: metricValue("reach"),
+            likes: metricValue("likes"),
+            comments: metricValue("comments"),
+            shares: metricValue("shares"),
+            saved: metricValue("saved"),
+            total_interactions: metricValue("total_interactions"),
+            unavailable_metrics: unavailable,
             api_version: env.graphVersion,
             last_synced_at: nowIso,
           },
@@ -360,7 +375,9 @@ export async function syncInsights(userId: string, options: SyncOptions = {}): P
   const env = readMetaEnv();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const deep = Boolean(options.deep);
-  const limitPerAccount = options.limitPerAccount ?? (deep ? 30 : 15);
+  // Modo profundo (botão do usuário) varre mais publicações; o cron horário
+  // continua leve para respeitar o rate limit da Meta.
+  const limitPerAccount = options.limitPerAccount ?? (deep ? 60 : 15);
 
   const { data: run } = await supabaseAdmin
     .from("sync_executions")

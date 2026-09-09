@@ -118,8 +118,8 @@ export function InsightsChart() {
                   color: "var(--popover-foreground)",
                 }}
                 labelFormatter={(l: string) => shortDay(l)}
-                formatter={(value: number, name: string) => [
-                  nf.format(value),
+                formatter={(value: number | null, name: string) => [
+                  value === null || value === undefined ? "—" : nf.format(value),
                   name === "views" ? "Views" : "Seguidores",
                 ]}
               />
