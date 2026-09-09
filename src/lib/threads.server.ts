@@ -509,9 +509,40 @@ async function legacyFetchThreadsPostsMetrics(userId: string, days = 30) {
 const THREADS_NO_DATA =
   "Nenhuma métrica do Threads coletada ainda. Use Sincronizar agora para buscar os dados oficiais.";
 
+/** Janela em que os dados armazenados do Threads são considerados atuais. */
+const THREADS_FRESH_MS = 5 * 60_000;
+
+/**
+ * Garante dados recentes antes de qualquer leitura: se a última coleta oficial
+ * de alguma conta do Threads passou da janela de frescor, sincroniza agora.
+ * Falhas aqui nunca quebram a leitura — mostramos o que já existe no banco.
+ */
+async function ensureFreshThreadsData(userId: string) {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("instagram_accounts")
+      .select("last_sync_at")
+      .eq("user_id", userId)
+      .eq("platform", "threads")
+      .eq("status", "connected");
+    const accounts = data ?? [];
+    if (accounts.length === 0) return;
+    const stale = accounts.some((a) => {
+      const ts = a.last_sync_at ? Date.parse(a.last_sync_at) : NaN;
+      return !Number.isFinite(ts) || Date.now() - ts > THREADS_FRESH_MS;
+    });
+    if (stale) await syncThreadsInsights(userId);
+  } catch {
+    // sincronização automática indisponível — segue com os dados já gravados
+  }
+}
+
 /** Resumo por conta do Threads: seguidores e views em 1, 7 e 30 dias (dados armazenados). */
 export async function fetchThreadsAccountsInsights(userId: string) {
+  await ensureFreshThreadsData(userId);
   const accounts = await threadsAccounts(userId);
+
   const rows = await dailyMetricRows(
     userId,
     accounts.map((a) => a.id),
