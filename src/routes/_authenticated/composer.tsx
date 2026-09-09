@@ -697,22 +697,28 @@ function Composer() {
 
                 <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <Label className="text-xs">Repetir este conteúdo em outros horários</Label>
+                    <Label className="text-xs">Agendar em vários dias e horários</Label>
                     <span className="text-[11px] text-muted-foreground">
                       {allTimes.length} agendamento(s)
                     </span>
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Mesma legenda, hashtags, mídia e capa — uma cópia agendada para cada horário.
+                    Mesma legenda, hashtags, mídia e capa — uma cópia agendada para cada data/horário da lista.
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Input
+                      type="date"
+                      value={newDate || schedDate}
+                      onChange={(e) => setNewDate(e.target.value)}
+                      className="w-40 bg-background"
+                    />
                     <Input
                       type="time"
                       step={60}
                       list="sk7-time-slots"
                       value={newTime}
                       onChange={(e) => setNewTime(e.target.value)}
-                      className="bg-background"
+                      className="w-32 bg-background"
                     />
                     <datalist id="sk7-time-slots">
                       {TIME_SLOTS.map((s) => (
