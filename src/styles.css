@@ -5,8 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -55,6 +55,7 @@
 
   --shadow-panel: 0 1px 2px oklch(0.26 0.025 250 / 5%), 0 8px 24px -18px oklch(0.26 0.025 250 / 22%);
   --shadow-glow: 0 0 0 1px oklch(0.58 0.2 255 / 18%), 0 14px 32px -20px oklch(0.58 0.2 255 / 30%);
+  --shadow-composer: 0 20px 55px -34px oklch(0.16 0.025 255 / 32%);
 }
 
 :root {
@@ -189,4 +190,12 @@
 
 @utility brand-glow {
   box-shadow: var(--shadow-glow);
+}
+
+@utility composer-panel {
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-composer);
+  backdrop-filter: blur(18px);
 }

@@ -18,10 +18,11 @@ type Props = {
   kind?: "IMAGE" | "VIDEO";
   multiple?: boolean;
   label?: string;
+  triggerClassName?: string;
   onSelect: (urls: string[]) => void;
 };
 
-export function MediaPicker({ kind, multiple = false, label = "Escolher da biblioteca", onSelect }: Props) {
+export function MediaPicker({ kind, multiple = false, label = "Escolher da biblioteca", triggerClassName, onSelect }: Props) {
   const [open, setOpen] = useState(false);
   const [folderId, setFolderId] = useState<string | "all" | "none">("all");
   const [term, setTerm] = useState("");
@@ -56,7 +57,7 @@ export function MediaPicker({ kind, multiple = false, label = "Escolher da bibli
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" size="sm" variant="secondary">
+        <Button type="button" size="sm" variant="secondary" className={triggerClassName}>
           <Images className="h-4 w-4" /> {label}
         </Button>
       </DialogTrigger>

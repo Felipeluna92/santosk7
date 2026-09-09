@@ -7,13 +7,16 @@ import {
   CalendarClock,
   Image as ImageIcon,
   Film,
-  Layers,
   CircleDot,
   FileText,
-  Info,
   Copy,
   Plus,
   X,
+  Clock3,
+  CheckCircle2,
+  Library,
+  Sparkles,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,18 +26,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { accountsQuery, postsQuery, POST_STATUS, fmtDate } from "@/lib/data";
+import { accountsQuery, postsQuery, fmtDate } from "@/lib/data";
 import { publishPost } from "@/lib/meta.functions";
-import { MediaUpload } from "@/components/MediaUpload";
 import { MediaPicker } from "@/components/MediaPicker";
 import { CaptionPicker } from "@/components/CaptionPicker";
 import { PresetBar } from "@/components/PresetBar";
@@ -115,9 +109,11 @@ function Composer() {
       toast.success(`${clean.length} mídias — virou carrossel automaticamente.`);
       return;
     }
+    const url = clean[0] as string;
     setCarousel("");
-    setMediaUrl(clean[0] as string);
-    setType((prev) => (prev === "CAROUSEL" ? "POST" : prev));
+    setMediaUrl(url);
+    if (platform === "instagram" && /\.(mp4|mov)(?:\?|$)/i.test(url)) setType("REEL");
+    else setType((prev) => (prev === "CAROUSEL" || prev === "REEL" ? "POST" : prev));
   };
 
   const isThreads = platform === "threads";
@@ -294,564 +290,79 @@ function Composer() {
 
   const busy = draftMutation.isPending || scheduleMutation.isPending || publishMutation.isPending;
 
+  const setHoursAhead = (hours: number) => {
+    const d = new Date(Date.now() + hours * 60 * 60_000);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setSchedDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+    setSchedTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
+  };
+
+  const detectedType = type === "CAROUSEL" ? "Carrossel" : type === "REEL" ? "Reel" : type === "STORY" ? "Story" : isThreads ? "Thread" : "Post";
+  const mediaCount = type === "CAROUSEL" ? carouselUrls.length : mediaUrl ? 1 : 0;
+
   return (
-    <AppShell title="Publicar" subtitle="Criação, duplicação e agendamento em vários horários">
-
-      <div className="mb-4 inline-flex rounded-lg border border-border bg-muted/60 p-1">
-        {([
-          { id: "instagram" as const, label: "Instagram" },
-          { id: "threads" as const, label: "Threads" },
-        ]).map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => {
-              setPlatform(p.id);
-              setAccountIds([]);
-              if (p.id === "threads" && type !== "CAROUSEL") setType("POST");
-            }}
-            className={`rounded-md px-4 py-1.5 text-xs font-semibold transition-colors ${
-              platform === p.id ? "bg-surface text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      <PresetBar
-        platform={platform}
-        current={() => ({
-          platform,
-          type,
-          account_ids: accountIds,
-          caption: caption || null,
-          caption_variants: captionVariants,
-          hashtags: hashtags || null,
-          media_url: mediaUrl || null,
-          cover_url: coverUrl || null,
-          carousel_urls: carouselUrls,
-          default_time: schedTime || null,
-        })}
-        onApply={(p) => {
-          setType((p.type as typeof type) ?? "POST");
-          setAccountIds(p.account_ids ?? []);
-          setCaption(p.caption ?? "");
-          setCaptionVariants(p.caption_variants ?? []);
-          setHashtags(p.hashtags ?? "");
-          setMediaUrl(p.media_url ?? "");
-          setCoverUrl(p.cover_url ?? "");
-          setCarousel((p.carousel_urls ?? []).join("\n"));
-          if (p.default_time) setSchedTime(p.default_time);
-        }}
-      />
-
-      <Tabs value={type} onValueChange={(v) => setType(v as typeof type)}>
-        <TabsList
-          className={`grid w-full gap-1 bg-surface px-1 sm:inline-flex sm:w-auto ${isThreads ? "grid-cols-3" : "grid-cols-5"}`}
-        >
-          <TabsTrigger value="POST" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-            <ImageIcon className="mr-1 h-3.5 w-3.5 shrink-0" /> {isThreads ? "Thread" : "Post"}
-          </TabsTrigger>
-          {isThreads ? null : (
-            <TabsTrigger value="REEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-              <Film className="mr-1 h-3.5 w-3.5 shrink-0" /> Reel
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="CAROUSEL" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-            <Layers className="mr-1 h-3.5 w-3.5 shrink-0" /> Carrossel
-          </TabsTrigger>
-          {isThreads ? null : (
-            <TabsTrigger value="STORY" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-              <CircleDot className="mr-1 h-3.5 w-3.5 shrink-0" /> Story
-            </TabsTrigger>
-          )}
-
-          <TabsTrigger value="DRAFTS" className="px-1.5 text-[11px] sm:px-3 sm:text-sm">
-            <FileText className="mr-1 h-3.5 w-3.5 shrink-0" /> Rascunhos
-          </TabsTrigger>
-        </TabsList>
-
-
-        <TabsContent value="DRAFTS" className="mt-4">
-          <div className="panel divide-y divide-border">
-            {drafts.length === 0 ? (
-              <p className="px-4 py-10 text-center text-xs text-muted-foreground">
-                Nenhum rascunho salvo ainda.
-              </p>
-            ) : (
-              drafts.map((d) => (
-                <div key={d.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0 flex-1 basis-40">
-
-                    <p className="truncate text-[13px] font-medium">{d.caption || "Sem legenda"}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {d.type} · criado em {fmtDate(d.created_at)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={`border-0 ${POST_STATUS[d.status]?.tone}`}>
-                      {POST_STATUS[d.status]?.label}
-                    </Badge>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => {
-                        loadPost(d);
-                        toast.info("Rascunho carregado no editor.");
-                      }}
-                    >
-                      Carregar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        loadPost(d);
-                        setSchedDate("");
-                        setSchedTime("");
-                        setExtraTimes([]);
-                        setType(((d.type as typeof type) ?? "POST"));
-                        toast.info("Cópia criada — escolha os novos horários.");
-                      }}
-                    >
-                      <Copy className="h-3.5 w-3.5" /> Duplicar
-                    </Button>
-
-                  </div>
-                </div>
-              ))
-            )}
+    <AppShell title="Publicar" subtitle="Crie, programe e publique usando sua Biblioteca">
+      <div className="mx-auto max-w-[1380px] space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="inline-flex w-fit rounded-xl border border-border bg-surface p-1 shadow-sm">
+            {(["instagram", "threads"] as const).map((item) => (
+              <Button key={item} type="button" size="sm" variant={platform === item ? "default" : "ghost"} className="min-w-28" onClick={() => { setPlatform(item); setAccountIds([]); if (item === "threads" && type !== "CAROUSEL") setType("POST"); }}>
+                {platform === item ? <CheckCircle2 /> : null}{item === "instagram" ? "Instagram" : "Threads"}
+              </Button>
+            ))}
           </div>
-        </TabsContent>
+          <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground"><Sparkles className="h-4 w-4 text-primary" />O formato muda automaticamente conforme a mídia.</div>
+        </div>
 
-        {(["POST", "REEL", "CAROUSEL", "STORY"] as const).map((t) => (
-          <TabsContent key={t} value={t} className="mt-4">
-            <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-              <div className="panel min-w-0 space-y-4 p-4">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label className="text-xs">Contas ({accountIds.length} selecionada(s))</Label>
-                    {accountList.length > 1 ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 text-[11px]"
-                        onClick={() =>
-                          setAccountIds(
-                            accountIds.length === accountList.length ? [] : accountList.map((a) => a.id),
-                          )
-                        }
-                      >
-                        {accountIds.length === accountList.length ? "Limpar" : "Selecionar todas"}
-                      </Button>
-                    ) : null}
-                  </div>
-                  <div className="space-y-1 rounded-md border border-border bg-background p-2">
-                    {accountList.length === 0 ? (
-                      <p className="px-1 py-2 text-[11px] text-muted-foreground">
-                        {isThreads ? "Nenhuma conta do Threads conectada" : "Nenhuma conta do Instagram conectada"}
-                      </p>
-                    ) : (
-                      accountList.map((a) => (
-                        <label
-                          key={a.id}
-                          className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1.5 text-[12px] hover:bg-secondary/50"
-                        >
-                          <input
-                            type="checkbox"
-                            className="accent-primary"
-                            checked={accountIds.includes(a.id)}
-                            onChange={(e) =>
-                              setAccountIds((prev) =>
-                                e.target.checked ? [...prev, a.id] : prev.filter((x) => x !== a.id),
-                              )
-                            }
-                          />
-                          <span className="truncate">@{a.username}</span>
-                          <span className="ml-auto text-[10px] text-muted-foreground">{a.account_type}</span>
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
+        <PresetBar platform={platform} current={() => ({ platform, type, account_ids: accountIds, caption: caption || null, caption_variants: captionVariants, hashtags: hashtags || null, media_url: mediaUrl || null, cover_url: coverUrl || null, carousel_urls: carouselUrls, default_time: schedTime || null })} onApply={(p) => { setType((p.type as typeof type) ?? "POST"); setAccountIds(p.account_ids ?? []); setCaption(p.caption ?? ""); setCaptionVariants(p.caption_variants ?? []); setHashtags(p.hashtags ?? ""); setMediaUrl(p.media_url ?? ""); setCoverUrl(p.cover_url ?? ""); setCarousel((p.carousel_urls ?? []).join("\n")); if (p.default_time) setSchedTime(p.default_time); }} />
 
-                {t === "STORY" ? (
-                  <div className="space-y-2">
-                    <MediaPicker
-                      kind={storyKind === "video" ? "VIDEO" : "IMAGE"}
-                      label="Escolher da biblioteca"
-                      onSelect={(urls) => urls[0] && setMediaUrl(urls[0])}
-                    />
-                    <StoryEditor
-                      kind={storyKind}
-                      onKindChange={setStoryKind}
-                      value={mediaUrl}
-                      onChange={setMediaUrl}
-                    />
-                  </div>
-                ) : t === "CAROUSEL" ? (
-                  <div className="space-y-1.5">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <Label className="text-xs">URLs do carrossel (uma por linha, 2 a {isThreads ? 20 : 10})</Label>
-                      <MediaPicker
-                        multiple
-                        label="Escolher da biblioteca"
-                        onSelect={(urls) => {
-                          const all = [...carousel.split("\n").filter(Boolean), ...urls.filter(Boolean)];
-                          if (all.length === 1) applyMediaSelection(all);
-                          else setCarousel(all.join("\n"));
-                        }}
-                      />
-                    </div>
-                    <Textarea
-                      rows={5}
-                      value={carousel}
-                      onChange={(e) => setCarousel(e.target.value)}
-                      placeholder={"https://cdn.exemplo.com/1.jpg\nhttps://cdn.exemplo.com/2.jpg"}
-                      className="bg-background font-mono text-xs"
-                    />
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <MediaUpload
-                      label={isThreads ? "Mídia do thread (opcional)" : t === "REEL" ? "Vídeo do Reel" : "Imagem do post"}
-                      kind={t === "REEL" ? "video" : "image"}
-                      value={mediaUrl}
-                      onChange={setMediaUrl}
-                      hint={
-                        isThreads
-                          ? "Opcional: o Threads aceita texto puro, uma imagem ou um vídeo por publicação."
-                          : t === "REEL"
-                            ? "MP4 ou MOV, até 300 MB. Gera uma URL pública HTTPS automaticamente."
-                            : "JPG ou PNG, até 8 MB. Gera uma URL pública HTTPS automaticamente."
-                      }
-                    />
-                    <MediaPicker
-                      multiple={t !== "REEL"}
-                      {...(t === "REEL" ? { kind: "VIDEO" as const } : {})}
-                      label={t === "REEL" ? "Escolher da biblioteca" : "Escolher da biblioteca (2+ viram carrossel)"}
-                      onSelect={(urls) => (t === "REEL" ? urls[0] && setMediaUrl(urls[0]) : applyMediaSelection(urls))}
-                    />
-                    {t === "REEL" ? (
-                      <MediaUpload
-                        label="Capa do Reel"
-                        kind="image"
-                        optional
-                        value={coverUrl}
-                        onChange={setCoverUrl}
-                        hint="JPG ou PNG. Sem capa, a Meta usa a miniatura automática do vídeo (cover_url)."
-                      />
-                    ) : null}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Ou cole uma URL pública já hospedada</Label>
-                      <Input
-                        value={mediaUrl}
-                        onChange={(e) => setMediaUrl(e.target.value)}
-                        placeholder="https://cdn.exemplo.com/arquivo.jpg"
-                        className="bg-background font-mono text-xs"
-                      />
-                    </div>
-                  </div>
-                )}
-
-
-                <p className="flex gap-1.5 rounded-md bg-secondary/60 p-2.5 text-[11px] text-muted-foreground">
-                  <Info className="mt-px h-3.5 w-3.5 shrink-0" />
-                  Arquivos enviados aqui ficam no armazenamento do app e recebem uma URL HTTPS pública e
-                  permanente — é essa URL que a API oficial da Meta baixa como image_url, video_url ou
-                  cover_url.
-                </p>
-
-                <div className={`space-y-1.5 ${t === "STORY" ? "hidden" : ""}`}>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Label className="text-xs">Legenda</Label>
-                    <CaptionPicker
-                      current={caption}
-                      onUse={setCaption}
-                      onUseMany={(texts) => {
-                        setCaptionVariants(texts);
-                        if (texts[0]) setCaption(texts[0]);
-                        toast.success(`${texts.length} variações de legenda ativas.`);
-                      }}
-                    />
-                  </div>
-                  <Textarea
-                    rows={4}
-                    value={caption}
-                    onChange={(e) => setCaption(e.target.value)}
-                    placeholder="Escreva a legenda..."
-                    className="bg-background"
-                  />
-                  <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <Label className="text-xs">Variações de legenda</Label>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 text-[11px]"
-                        onClick={() => {
-                          if (!caption.trim()) {
-                            toast.error("Escreva uma legenda para adicionar como variação.");
-                            return;
-                          }
-                          setCaptionVariants((prev) =>
-                            prev.includes(caption.trim()) ? prev : [...prev, caption.trim()],
-                          );
-                        }}
-                      >
-                        <Plus className="h-3.5 w-3.5" /> Adicionar a atual
-                      </Button>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Com várias legendas, cada post criado recebe uma delas em rodízio (contas e horários).
-                    </p>
-                    {captionVariants.length ? (
-                      <div className="space-y-1.5">
-                        {captionVariants.map((v, i) => (
-                          <div
-                            key={`${v}-${i}`}
-                            className="flex items-start gap-2 rounded-md bg-secondary/60 px-2.5 py-1.5 text-[11px]"
-                          >
-                            <span className="shrink-0 font-semibold text-muted-foreground">{i + 1}.</span>
-                            <span className="min-w-0 flex-1 line-clamp-2 whitespace-pre-wrap">{v}</span>
-                            <button
-                              type="button"
-                              aria-label="Remover variação"
-                              className="text-muted-foreground hover:text-foreground"
-                              onClick={() => setCaptionVariants((prev) => prev.filter((_, x) => x !== i))}
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-[11px] text-muted-foreground">
-                        Nenhuma variação — todos os posts usam a legenda acima.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className={`space-y-1.5 ${t === "STORY" ? "hidden" : ""}`}>
-                    <Label className="text-xs">Hashtags</Label>
-                    <Input
-                      value={hashtags}
-                      onChange={(e) => setHashtags(e.target.value)}
-                      placeholder="#marca #conteudo"
-                      className="bg-background"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Data</Label>
-                      <Input
-                        type="date"
-                        value={schedDate}
-                        onChange={(e) => setSchedDate(e.target.value)}
-                        className="bg-background"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Horário</Label>
-                      <Input
-                        type="time"
-                        step={60}
-                        list="sk7-time-slots"
-                        value={schedTime}
-                        onChange={(e) => setSchedTime(e.target.value)}
-                        className="bg-background"
-                      />
-                    </div>
-
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { label: "Em 15 min", ms: 15 * 60_000 },
-                    { label: "Em 1 hora", ms: 60 * 60_000 },
-                    { label: "Em 3 horas", ms: 3 * 60 * 60_000 },
-                    { label: "Amanhã, mesma hora", ms: 24 * 60 * 60_000 },
-                  ].map((q) => (
-                    <button
-                      key={q.label}
-                      type="button"
-                      onClick={() => {
-                        const d = new Date(Date.now() + q.ms);
-                        const pad = (n: number) => String(n).padStart(2, "0");
-                        setSchedDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
-                        setSchedTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
-                      }}
-                      className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
-                    >
-                      {q.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label className="text-xs">Agendar em vários dias e horários</Label>
-                    <span className="text-[11px] text-muted-foreground">
-                      {allTimes.length} agendamento(s)
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Mesma legenda, hashtags, mídia e capa — uma cópia agendada para cada data/horário da lista.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Input
-                      type="date"
-                      value={newDate || schedDate}
-                      onChange={(e) => setNewDate(e.target.value)}
-                      className="w-40 bg-background"
-                    />
-                    <Input
-                      type="time"
-                      step={60}
-                      list="sk7-time-slots"
-                      value={newTime}
-                      onChange={(e) => setNewTime(e.target.value)}
-                      className="w-32 bg-background"
-                    />
-                    <datalist id="sk7-time-slots">
-                      {TIME_SLOTS.map((s) => (
-                        <option key={s} value={s} />
-                      ))}
-                    </datalist>
-
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => {
-                        const day = newDate || schedDate;
-                        if (!newTime || !day) {
-                          toast.error("Escolha a data e o horário.");
-                          return;
-                        }
-                        const value = `${day}T${newTime}`;
-                        if (allTimes.includes(value)) {
-                          toast.error("Esse horário já está na lista.");
-                          return;
-                        }
-                        setExtraTimes((prev) => [...prev, value].sort());
-                        setNewTime("");
-                      }}
-                    >
-                      <Plus className="h-4 w-4" /> Adicionar
-                    </Button>
-                  </div>
-                  {extraTimes.length ? (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {extraTimes.map((t) => (
-                        <span
-                          key={t}
-                          className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px]"
-                        >
-                          {fmtDate(new Date(t).toISOString())}
-                          <button
-                            type="button"
-                            aria-label="Remover horário"
-                            className="text-muted-foreground hover:text-foreground"
-                            onClick={() => setExtraTimes((prev) => prev.filter((x) => x !== t))}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-
-
-
-                {capabilityError || mediaError ? (
-                  <div className="rounded-md border border-warning/30 bg-warning/10 p-2.5 text-[11px] text-warning">
-                    {capabilityError ?? mediaError}
-                  </div>
-                ) : null}
-
-                <div className="sticky bottom-2 z-10 flex flex-wrap gap-2 rounded-lg border border-border bg-surface/95 p-2 backdrop-blur">
-                  <Button variant="secondary" size="sm" disabled={busy} onClick={() => draftMutation.mutate()}>
-                    <Save className="h-4 w-4" /> Salvar rascunho
-                  </Button>
-                  <Button variant="outline" size="sm" disabled={busy} onClick={() => scheduleMutation.mutate()}>
-                    <CalendarClock className="h-4 w-4" /> Agendar{allTimes.length > 1 ? ` (${allTimes.length})` : ""}
-                  </Button>
-                  <Button size="sm" disabled={busy} onClick={() => publishMutation.mutate()}>
-                    <Send className="h-4 w-4" /> Publicar agora
-                  </Button>
-                </div>
+        <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,.85fr)]">
+          <div className="min-w-0 space-y-4">
+            <section className="composer-panel p-4 sm:p-6">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <div><p className="text-[10px] font-bold uppercase text-primary">Etapa 1</p><h2 className="font-display text-lg font-semibold">Contas e formato</h2></div>
+                {!isThreads ? <div className="flex rounded-lg border border-border bg-secondary/55 p-1">{(["POST", "REEL", "STORY"] as const).map((item) => <Button key={item} type="button" size="sm" variant={type === item ? "default" : "ghost"} className="h-8" onClick={() => setType(item)}>{item === "POST" ? <ImageIcon /> : item === "REEL" ? <Film /> : <CircleDot />}{item === "POST" ? "Post" : item === "REEL" ? "Reel" : "Story"}</Button>)}</div> : null}
               </div>
-
-              <div className="panel p-4">
-                <p className="mb-3 text-xs uppercase tracking-wide text-muted-foreground">Preview</p>
-                <div className="overflow-hidden rounded-lg border border-border bg-background">
-                  <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-                    <div className="brand-gradient-bg h-6 w-6 rounded-full" />
-                    <span className="text-xs font-medium">
-                      {account ? `@${account.username}` : "sua.conta"}
-                    </span>
-                    <Badge className="ml-auto border-0 bg-secondary text-[10px] text-muted-foreground">
-                      {t === "POST" ? "Post" : t === "REEL" ? "Reel" : t === "STORY" ? "Story" : "Carrossel"}
-                    </Badge>
-                  </div>
-                  <div
-                    className={`flex items-center justify-center bg-surface-2 ${t === "REEL" || t === "STORY" ? "aspect-[9/16]" : "aspect-square"}`}
-                  >
-                    {t === "CAROUSEL" ? (
-                      carouselUrls[0] ? (
-                        <img src={carouselUrls[0]} alt="Prévia do carrossel" className="h-full w-full object-cover" />
-                      ) : (
-                        <Layers className="h-6 w-6 text-muted-foreground" />
-                      )
-                    ) : t === "STORY" ? (
-                      mediaUrl ? (
-                        storyKind === "video" ? (
-                          <video src={mediaUrl} className="h-full w-full object-cover" muted playsInline controls />
-                        ) : (
-                          <img src={mediaUrl} alt="Prévia do Story" className="h-full w-full object-cover" />
-                        )
-                      ) : (
-                        <CircleDot className="h-6 w-6 text-muted-foreground" />
-                      )
-                    ) : t === "REEL" ? (
-                      coverUrl ? (
-                        <img src={coverUrl} alt="Capa do Reel" className="h-full w-full object-cover" />
-                      ) : mediaUrl ? (
-                        <video src={mediaUrl} className="h-full w-full object-cover" muted playsInline controls />
-                      ) : (
-                        <Film className="h-6 w-6 text-muted-foreground" />
-                      )
-                    ) : mediaUrl ? (
-                      <img src={mediaUrl} alt="Prévia do post" className="h-full w-full object-cover" />
-                    ) : (
-                      <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                    )}
-                  </div>
-                  <div className="space-y-1 px-3 py-2.5">
-                    <p className="whitespace-pre-wrap text-[12px]">{caption || "Sua legenda aparece aqui."}</p>
-                    <p className="text-[12px] text-[color:var(--info)]">{hashtags}</p>
-                  </div>
-                </div>
-
-                <div className="mt-3 rounded-md border border-dashed border-border p-2.5 text-[11px] text-muted-foreground">
-                  <strong className="text-foreground">Stories:</strong> publicados pela API oficial com
-                  media_type=STORIES. Legenda, hashtags e menção clicável não existem em Stories pela API —
-                  a marcação de @usuário é apenas visual, gravada no arquivo antes do upload.
-                </div>
+              <div className="mb-2 flex items-center justify-between"><Label className="text-xs">Contas ({accountIds.length} selecionada(s))</Label>{accountList.length > 1 ? <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setAccountIds(accountIds.length === accountList.length ? [] : accountList.map((a) => a.id))}>{accountIds.length === accountList.length ? "Limpar" : "Selecionar todas"}</Button> : null}</div>
+              <div className="grid gap-2 rounded-lg border border-border bg-background/70 p-2 sm:grid-cols-2">
+                {accountList.length === 0 ? <p className="px-2 py-4 text-xs text-muted-foreground">{isThreads ? "Nenhuma conta do Threads conectada" : "Nenhuma conta do Instagram conectada"}</p> : accountList.map((a) => <label key={a.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-xs transition-colors ${accountIds.includes(a.id) ? "border-primary bg-primary/10" : "border-border bg-surface hover:border-primary/40"}`}><input type="checkbox" className="accent-primary" checked={accountIds.includes(a.id)} onChange={(e) => setAccountIds((prev) => e.target.checked ? [...prev, a.id] : prev.filter((id) => id !== a.id))} /><span className="truncate font-medium">@{a.username}</span><span className="ml-auto text-[10px] text-muted-foreground">{a.account_type}</span></label>)}
               </div>
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
+            </section>
+
+            <section className="composer-panel p-4 sm:p-6">
+              <div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase text-primary">Etapa 2</p><h2 className="font-display text-lg font-semibold">Mídia da publicação</h2></div><Badge className="border-primary/25 bg-primary/10 text-primary">{detectedType} · {mediaCount}</Badge></div>
+              {type === "STORY" ? <div className="space-y-3"><MediaPicker kind={storyKind === "video" ? "VIDEO" : "IMAGE"} label={mediaUrl ? "Trocar mídia na Biblioteca" : "Abrir Biblioteca"} triggerClassName="h-12 w-full border-primary/30 bg-primary/10 text-primary hover:bg-primary/15" onSelect={(urls) => urls[0] && setMediaUrl(urls[0])} /><StoryEditor kind={storyKind} onKindChange={setStoryKind} value={mediaUrl} onChange={setMediaUrl} /></div> : <div className="space-y-4">
+                <MediaPicker multiple={type !== "REEL"} {...(type === "REEL" ? { kind: "VIDEO" as const } : {})} label={mediaCount ? "Alterar seleção na Biblioteca" : "Abrir Biblioteca de mídias"} triggerClassName="h-28 w-full flex-col border-2 border-dashed border-primary/30 bg-primary/5 text-sm text-primary hover:border-primary hover:bg-primary/10 [&_svg]:h-7 [&_svg]:w-7" onSelect={(urls) => type === "REEL" ? urls[0] && setMediaUrl(urls[0]) : applyMediaSelection(urls)} />
+                {mediaCount ? <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">{(type === "CAROUSEL" ? carouselUrls : [mediaUrl]).map((url, index) => <div key={`${url}-${index}`} className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-surface-2">{/\.(mp4|mov)(?:\?|$)/i.test(url) ? <video src={url} className="h-full w-full object-cover" muted /> : <img src={url} alt={`Mídia ${index + 1}`} className="h-full w-full object-cover" />}<Button type="button" size="icon" variant="destructive" className="absolute right-1 top-1 h-7 w-7" aria-label="Remover mídia" onClick={() => { if (type === "CAROUSEL") { const rest = carouselUrls.filter((_, i) => i !== index); if (rest.length) applyMediaSelection(rest); else { setCarousel(""); setMediaUrl(""); setType("POST"); } } else setMediaUrl(""); }}><Trash2 /></Button></div>)}</div> : <p className="text-center text-xs text-muted-foreground">Uma mídia cria um Post ou Reel. Duas ou mais criam um Carrossel automaticamente.</p>}
+                {type === "REEL" ? <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-background/60 p-3"><span className="text-xs text-muted-foreground">Capa do Reel (opcional)</span><MediaPicker kind="IMAGE" label={coverUrl ? "Trocar capa" : "Escolher capa"} onSelect={(urls) => urls[0] && setCoverUrl(urls[0])} /></div> : null}
+              </div>}
+            </section>
+
+            {type !== "STORY" ? <section className="composer-panel p-4 sm:p-6">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-[10px] font-bold uppercase text-primary">Etapa 3</p><h2 className="font-display text-lg font-semibold">Texto e legendas</h2></div><CaptionPicker current={caption} onUse={setCaption} onUseMany={(texts) => { setCaptionVariants(texts); if (texts[0]) setCaption(texts[0]); toast.success(`${texts.length} variações de legenda ativas.`); }} /></div>
+              <Textarea rows={6} value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Escreva a legenda..." className="bg-background/70 text-sm" />
+              <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]"><Input value={hashtags} onChange={(e) => setHashtags(e.target.value)} placeholder="#marca #conteudo" className="bg-background/70" /><Button type="button" variant="secondary" onClick={() => { if (!caption.trim()) return toast.error("Escreva uma legenda para adicionar como variação."); setCaptionVariants((prev) => prev.includes(caption.trim()) ? prev : [...prev, caption.trim()]); }}><Plus />Adicionar variação</Button></div>
+              {captionVariants.length ? <div className="mt-3 flex flex-wrap gap-2">{captionVariants.map((v, i) => <span key={`${v}-${i}`} className="inline-flex max-w-full items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs"><span className="max-w-72 truncate">{i + 1}. {v}</span><Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={() => setCaptionVariants((prev) => prev.filter((_, x) => x !== i))}><X /></Button></span>)}</div> : null}
+            </section> : null}
+
+            <section className="composer-panel p-4 sm:p-6"><div className="mb-3 flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase text-primary">Rascunhos</p><h2 className="font-display text-base font-semibold">Continuar depois</h2></div><Badge variant="secondary">{drafts.length}</Badge></div>{drafts.length === 0 ? <p className="py-4 text-center text-xs text-muted-foreground">Nenhum rascunho salvo.</p> : <div className="divide-y divide-border">{drafts.slice(0, 4).map((d) => <div key={d.id} className="flex items-center gap-3 py-3"><FileText className="h-4 w-4 text-muted-foreground" /><div className="min-w-0 flex-1"><p className="truncate text-xs font-medium">{d.caption || "Sem legenda"}</p><p className="text-[10px] text-muted-foreground">{fmtDate(d.created_at)}</p></div><Button size="sm" variant="secondary" onClick={() => loadPost(d)}>Carregar</Button><Button size="icon" variant="ghost" aria-label="Duplicar" onClick={() => { loadPost(d); setSchedDate(""); setSchedTime(""); setExtraTimes([]); toast.info("Cópia criada — escolha os novos horários."); }}><Copy /></Button></div>)}</div>}</section>
+          </div>
+
+          <aside className="min-w-0 space-y-4 xl:sticky xl:top-24 xl:self-start">
+            <section className="composer-panel p-4 sm:p-5">
+              <div className="mb-5 flex items-center gap-2"><Clock3 className="h-5 w-5 text-primary" /><h2 className="font-display text-lg font-semibold">Programação</h2></div>
+              <div className="grid grid-cols-2 gap-3"><div className="space-y-1.5"><Label className="text-xs">Data</Label><Input type="date" value={schedDate} onChange={(e) => setSchedDate(e.target.value)} className="bg-background/70" /></div><div className="space-y-1.5"><Label className="text-xs">Horário</Label><Input type="time" step={60} list="sk7-time-slots" value={schedTime} onChange={(e) => setSchedTime(e.target.value)} className="bg-background/70" /></div></div>
+              <p className="mb-2 mt-4 text-[10px] font-bold uppercase text-muted-foreground">Programar para daqui a</p><div className="grid grid-cols-4 gap-2">{[3,6,9,12,15,18,21,24].map((hours) => <Button key={hours} type="button" size="sm" variant="secondary" className="border-primary/15 hover:border-primary hover:bg-primary/10 hover:text-primary" onClick={() => setHoursAhead(hours)}>{hours}h</Button>)}</div>
+              <div className="mt-5 rounded-lg border border-border bg-background/50 p-3"><div className="mb-3 flex items-center justify-between"><Label className="text-xs">Vários horários</Label><Badge variant="secondary">{allTimes.length}</Badge></div><div className="grid grid-cols-[1fr_1fr_auto] gap-2"><Input type="date" value={newDate || schedDate} onChange={(e) => setNewDate(e.target.value)} className="min-w-0 bg-background" /><Input type="time" step={60} list="sk7-time-slots" value={newTime} onChange={(e) => setNewTime(e.target.value)} className="min-w-0 bg-background" /><Button type="button" size="icon" aria-label="Adicionar horário" onClick={() => { const day = newDate || schedDate; if (!newTime || !day) return toast.error("Escolha a data e o horário."); const value = `${day}T${newTime}`; if (allTimes.includes(value)) return toast.error("Esse horário já está na lista."); setExtraTimes((prev) => [...prev, value].sort()); setNewTime(""); }}><Plus /></Button></div><datalist id="sk7-time-slots">{TIME_SLOTS.map((s) => <option key={s} value={s} />)}</datalist>{extraTimes.length ? <div className="mt-3 space-y-1.5">{extraTimes.map((item) => <div key={item} className="flex items-center justify-between rounded-md bg-secondary px-2.5 py-2 text-[11px]"><span>{fmtDate(new Date(item).toISOString())}</span><Button type="button" size="icon" variant="ghost" className="h-6 w-6" aria-label="Remover horário" onClick={() => setExtraTimes((prev) => prev.filter((x) => x !== item))}><X /></Button></div>)}</div> : null}</div>
+            </section>
+
+            <section className="composer-panel overflow-hidden p-4 sm:p-5"><div className="mb-3 flex items-center justify-between"><h2 className="font-display text-base font-semibold">Prévia</h2><Badge className="border-primary/25 bg-primary/10 text-primary">{detectedType}</Badge></div><div className="overflow-hidden rounded-lg border border-border bg-background"><div className="flex items-center gap-2 border-b border-border px-3 py-2"><div className="h-6 w-6 rounded-full bg-primary" /><span className="text-xs font-medium">{account ? `@${account.username}` : "sua.conta"}</span></div><div className={`flex max-h-[320px] items-center justify-center overflow-hidden bg-surface-2 ${type === "REEL" || type === "STORY" ? "aspect-[9/16]" : "aspect-square"}`}>{type === "CAROUSEL" && carouselUrls[0] ? <img src={carouselUrls[0]} alt="Prévia do carrossel" className="h-full w-full object-cover" /> : type === "REEL" && mediaUrl ? <video src={mediaUrl} className="h-full w-full object-cover" muted /> : mediaUrl ? <img src={mediaUrl} alt="Prévia da publicação" className="h-full w-full object-cover" /> : <Library className="h-8 w-8 text-muted-foreground" />}</div>{type !== "STORY" ? <div className="p-3"><p className="line-clamp-3 whitespace-pre-wrap text-xs">{caption || "Sua legenda aparece aqui."}</p><p className="mt-1 text-xs text-primary">{hashtags}</p></div> : null}</div></section>
+
+            {(capabilityError || mediaError) ? <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning">{capabilityError ?? mediaError}</div> : null}
+            <section className="composer-panel space-y-2 border-primary/20 p-3"><Button className="h-12 w-full text-sm shadow-lg shadow-primary/20" disabled={busy} onClick={() => publishMutation.mutate()}><Send />Publicar agora</Button><Button className="h-11 w-full border-primary/30 bg-secondary text-foreground hover:bg-primary/10 hover:text-primary" variant="outline" disabled={busy} onClick={() => scheduleMutation.mutate()}><CalendarClock />Agendar{allTimes.length > 1 ? ` ${allTimes.length} publicações` : " publicação"}</Button><Button className="h-10 w-full" variant="ghost" disabled={busy} onClick={() => draftMutation.mutate()}><Save />Salvar rascunho</Button></section>
+          </aside>
+        </div>
+      </div>
     </AppShell>
   );
 }
