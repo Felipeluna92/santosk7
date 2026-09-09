@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Upload, X, Loader2, Info, Type, Plus, AtSign, Trash2, Link2 } from "lucide-react";
+import { X, Loader2, Info, Type, Plus, AtSign, Trash2, Link2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,16 +28,12 @@ type Props = {
 };
 
 export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [localUrl, setLocalUrl] = useState("");
   const [overlay, setOverlay] = useState<Overlay>(DEFAULT_OVERLAY);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
 
-  const accept = kind === "image" ? "image/jpeg,image/png" : "video/mp4,video/quicktime";
   const active = overlay.find((i) => i.id === activeId) ?? null;
 
   const patchActive = (patch: Partial<OverlayItem>) =>
@@ -52,18 +48,6 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
   const removeItem = (id: string) => {
     setOverlay((list) => list.filter((i) => i.id !== id));
     setActiveId((cur) => (cur === id ? null : cur));
-  };
-
-  const pickFile = async (picked: File) => {
-    const invalid = await validateStoryFile(picked, kind);
-    if (invalid) {
-      toast.error(invalid);
-      return;
-    }
-    if (localUrl) URL.revokeObjectURL(localUrl);
-    setFile(picked);
-    setLocalUrl(URL.createObjectURL(picked));
-    onChange("");
   };
 
   const move = useCallback((id: string, clientX: number, clientY: number) => {
@@ -81,13 +65,20 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
   }, []);
 
   const send = async () => {
-    if (!file) {
-      toast.error("Escolha a imagem ou o vídeo do Story.");
+    if (!value) {
+      toast.error("Escolha a mídia do Story na Biblioteca.");
       return;
     }
     setBusy(true);
     setProgress(null);
     try {
+      const response = await fetch(value);
+      if (!response.ok) throw new Error("Não foi possível abrir a mídia escolhida.");
+      const blob = await response.blob();
+      const extension = kind === "image" ? ".jpg" : ".mp4";
+      const file = new File([blob], `story${extension}`, { type: blob.type });
+      const invalid = await validateStoryFile(file, kind);
+      if (invalid) throw new Error(invalid);
       const prepared =
         kind === "image"
           ? await burnImageOverlay(file, overlay)
@@ -106,9 +97,6 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
   const clear = async () => {
     const path = pathFromPublicUrl(value);
     onChange("");
-    setFile(null);
-    if (localUrl) URL.revokeObjectURL(localUrl);
-    setLocalUrl("");
     if (path) await removeUploadedFile(path).catch(() => undefined);
   };
 
@@ -131,38 +119,21 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
         ))}
       </div>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        className="hidden"
-        onChange={(e) => {
-          const picked = e.target.files?.[0];
-          if (picked) void pickFile(picked);
-          if (inputRef.current) inputRef.current.value = "";
-        }}
-      />
-
       <div className="grid gap-3 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)]">
         <div
           ref={stageRef}
           className="relative mx-auto aspect-[9/16] w-full max-w-[180px] select-none overflow-hidden rounded-lg border border-border bg-surface-2"
         >
-          {localUrl ? (
+          {value ? (
             kind === "image" ? (
-              <img src={localUrl} alt="Prévia do Story" className="h-full w-full object-cover" />
+              <img src={value} alt="Prévia do Story" className="h-full w-full object-cover" />
             ) : (
-              <video src={localUrl} className="h-full w-full object-cover" muted playsInline controls />
+              <video src={value} className="h-full w-full object-cover" muted playsInline controls />
             )
           ) : (
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="flex h-full w-full flex-col items-center justify-center gap-2 text-[11px] text-muted-foreground"
-            >
-              <Upload className="h-4 w-4" />
-              Escolher {kind === "image" ? "imagem" : "vídeo"} 9:16
-            </button>
+            <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-[11px] text-muted-foreground">
+              Escolha uma {kind === "image" ? "imagem" : "vídeo"} 9:16 na Biblioteca
+            </div>
           )}
 
           {overlay
@@ -340,16 +311,13 @@ export function StoryEditor({ kind, onKindChange, value, onChange }: Props) {
           ) : null}
 
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" disabled={busy} onClick={() => inputRef.current?.click()}>
-              <Upload className="h-4 w-4" /> {file ? "Trocar arquivo" : "Escolher arquivo"}
-            </Button>
-            <Button size="sm" disabled={busy || !file} onClick={() => void send()}>
+            <Button size="sm" disabled={busy || !value} onClick={() => void send()}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Type className="h-4 w-4" />}
               {busy
                 ? progress !== null
                   ? `Gravando texto... ${progress}%`
                   : "Preparando..."
-                : "Aplicar textos e enviar"}
+                : "Aplicar textos na mídia"}
             </Button>
             {value ? (
               <Button size="icon" variant="ghost" onClick={() => void clear()} aria-label="Remover mídia">
