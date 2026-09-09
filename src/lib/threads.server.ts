@@ -1,3 +1,4 @@
+import type { LooseTable } from "@/lib/db-loose";
 // Server-only helpers for the official Threads API (graph.threads.net).
 // Never import this from client code.
 

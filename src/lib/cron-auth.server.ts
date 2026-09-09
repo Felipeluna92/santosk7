@@ -1,3 +1,4 @@
+import type { LooseRpc } from "@/lib/db-loose";
 // ---------------------------------------------------------------------------
 // Segurança e coordenação dos endpoints de automação (crons / hooks).
 //

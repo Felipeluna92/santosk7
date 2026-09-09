@@ -1,3 +1,4 @@
+import type { LooseRpc, LooseTable } from "@/lib/db-loose";
 // Server-only helpers for the official Meta / Instagram Graph API.
 // Never import this from client code.
 
