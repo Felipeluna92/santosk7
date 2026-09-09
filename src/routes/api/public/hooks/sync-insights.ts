@@ -8,7 +8,7 @@ export const Route = createFileRoute("/api/public/hooks/sync-insights")({
         if (!expectedKey || request.headers.get("apikey") !== expectedKey) {
           return Response.json({ success: false, error: "Não autorizado." }, { status: 401 });
         }
-        const { syncInsights } = await import("@/lib/insights.server");
+        const { syncInsights } = await import("@/lib/collect.server");
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const { data } = await supabaseAdmin.from("instagram_accounts").select("user_id");

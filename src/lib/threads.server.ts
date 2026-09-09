@@ -1,7 +1,7 @@
 // Server-only helpers for the official Threads API (graph.threads.net).
 // Never import this from client code.
 
-import { writeLog } from "./meta.server";
+import { tokenFor, writeLog, todayUtc, dailyMetricRows, aggregateDailyWindow, latestFollowers, storedMediaRows, shiftDay } from "./meta.server";
 
 const THREADS_API = "https://graph.threads.net/v1.0";
 
@@ -328,7 +328,7 @@ function metricValue(payload: Record<string, unknown>, name: string): number | n
 }
 
 /** Resumo por conta do Threads: seguidores e views em 1, 7 e 30 dias. */
-export async function fetchThreadsAccountsInsights(userId: string) {
+async function legacyFetchThreadsAccountsInsights(userId: string) {
   const { tokenFor } = await import("./meta.server");
   const accounts = await threadsAccounts(userId);
   const results: {
@@ -410,7 +410,7 @@ export type ThreadsPostMetric = {
 };
 
 /** Métricas por publicação do Threads nos últimos N dias. */
-export async function fetchThreadsPostsMetrics(userId: string, days = 30) {
+async function legacyFetchThreadsPostsMetrics(userId: string, days = 30) {
   const { tokenFor } = await import("./meta.server");
   const accounts = await threadsAccounts(userId);
   const cutoff = Date.now() - days * 86400_000;
@@ -499,3 +499,265 @@ export async function fetchThreadsPostsMetrics(userId: string, days = 30) {
     errors,
   };
 }
+
+// ===========================================================================
+// Leituras de métricas do Threads a partir dos dados oficiais armazenados
+// (mesma filosofia do Instagram: exibir só o que o coletor gravou do banco).
+// ===========================================================================
+
+const THREADS_NO_DATA =
+  "Nenhuma métrica do Threads coletada ainda. Use Sincronizar agora para buscar os dados oficiais.";
+
+/** Resumo por conta do Threads: seguidores e views em 1, 7 e 30 dias (dados armazenados). */
+export async function fetchThreadsAccountsInsights(userId: string) {
+  const accounts = await threadsAccounts(userId);
+  const rows = await dailyMetricRows(
+    userId,
+    accounts.map((a) => a.id),
+    shiftDay(todayUtc(), -30),
+  );
+  return accounts.map((acc) => {
+    const w1 = aggregateDailyWindow(rows, acc.id, "views", 1);
+    const w7 = aggregateDailyWindow(rows, acc.id, "views", 7);
+    const w30 = aggregateDailyWindow(rows, acc.id, "views", 30);
+    const followers = latestFollowers(rows, acc.id);
+    const out: {
+      accountId: string;
+      username: string;
+      followers: number | null;
+      views: number | null;
+      views7d: number | null;
+      views30d: number | null;
+      error?: string;
+    } = {
+      accountId: acc.id,
+      username: acc.username,
+      followers,
+      views: w1.value,
+      views7d: w7.value,
+      views30d: w30.value,
+    };
+    if (followers === null && w7.daysAvailable === 0 && w30.daysAvailable === 0) {
+      out.error = THREADS_NO_DATA;
+    }
+    return out;
+  });
+}
+
+/** Métricas por publicação do Threads nos últimos N dias (dados armazenados). */
+export async function fetchThreadsPostsMetrics(userId: string, days = 30) {
+  const { posts, errors } = await storedMediaRows(userId, "threads", days);
+  const byDay = new Map<string, { day: string; views: number | null; likes: number | null; shares: number | null }>();
+  for (const p of posts) {
+    const day = p.timestamp.slice(0, 10);
+    const bucket = byDay.get(day) ?? { day, views: null, likes: null, shares: null };
+    bucket.views = bucket.views === null && p.views === null ? null : (bucket.views ?? 0) + (p.views ?? 0);
+    bucket.likes = bucket.likes === null && p.likes === null ? null : (bucket.likes ?? 0) + (p.likes ?? 0);
+    bucket.shares = bucket.shares === null && p.shares === null ? null : (bucket.shares ?? 0) + (p.shares ?? 0);
+    byDay.set(day, bucket);
+  }
+  const sum = (key: "views" | "likes" | "shares" | "comments") => {
+    const values = posts.filter((p) => p[key] !== null);
+    return values.length ? values.reduce((acc, p) => acc + (p[key] as number), 0) : null;
+  };
+  return {
+    posts,
+    series: Array.from(byDay.entries())
+      .map(([day, v]) => ({ day, ...v }))
+      .sort((a, b) => a.day.localeCompare(b.day)),
+    totals: {
+      views: sum("views"),
+      likes: sum("likes"),
+      shares: sum("shares"),
+      comments: sum("comments"),
+    },
+    errors,
+  };
+}
+
+/**
+ * Coleta os insights oficiais do Threads e os armazena no banco:
+ * - perfil/conta atualizada em instagram_accounts;
+ * - seguidores e views diárias em account_daily_metrics (quando a API devolver a série);
+ * - cada thread recente com suas métricas em ig_media (vinculada à conta).
+ * Nunca converte ausência em zero — métrica indisponível fica nula.
+ */
+export async function syncThreadsInsights(
+  userId: string,
+  options: { limitPerAccount?: number } = {},
+) {
+  const { limitPerAccount = 40 } = options;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const accounts = await threadsAccounts(userId);
+
+  let mediaUpserted = 0;
+  let errors = 0;
+  const messages: string[] = [];
+  const nowIso = new Date().toISOString();
+
+  for (const acc of accounts) {
+    try {
+      const token = await tokenFor(acc.id, userId);
+      if (!token) {
+        errors++;
+        messages.push(`@${acc.username}: sem token salvo.`);
+        continue;
+      }
+
+      // Perfil atual (também valida o token e renova o last_sync_at).
+      try {
+        const me = await threads(
+          `${THREADS_API}/me?fields=id,username,name,threads_profile_picture_url&access_token=${encodeURIComponent(token)}`,
+        );
+        await supabaseAdmin
+          .from("instagram_accounts")
+          .update({
+            username: String(me["username"] ?? acc.username),
+            display_name: (me["name"] as string) ?? null,
+            profile_picture_url: (me["threads_profile_picture_url"] as string) ?? null,
+            last_sync_at: nowIso,
+            status: "connected",
+          })
+          .eq("id", acc.id)
+          .eq("user_id", userId);
+      } catch (e) {
+        errors++;
+        messages.push(`@${acc.username}: perfil indisponível (${e instanceof Error ? e.message : "erro"}).`);
+        continue;
+      }
+
+      // Seguidores + série diária de views dos últimos 30 dias (melhor esforço).
+      let followers: number | null = null;
+      try {
+        const res = await threads(
+          `${THREADS_API}/me/threads_insights?metric=followers_count&access_token=${encodeURIComponent(token)}`,
+        );
+        followers = metricValue(res, "followers_count");
+      } catch {
+        // conta sem métrica de seguidores disponível
+      }
+
+      const dayViews = new Map<string, number>();
+      try {
+        const until = Math.floor(Date.now() / 1000);
+        const since = until - 30 * 86400;
+        const res = await threads(
+          `${THREADS_API}/me/threads_insights?metric=views&since=${since}&until=${until}&access_token=${encodeURIComponent(token)}`,
+        );
+        const rows = (res["data"] as Record<string, unknown>[] | undefined) ?? [];
+        const viewsRow = rows.find((r) => String(r["name"] ?? "") === "views");
+        const total = (viewsRow?.["total_value"] as { value?: number } | undefined)?.value;
+        const values = (viewsRow?.["values"] as { value?: number; end_time?: string }[] | undefined) ?? [];
+        if (values.length >= 2) {
+          for (const v of values) {
+            if (typeof v.value === "number" && v.end_time) {
+              const day = v.end_time.slice(0, 10);
+              dayViews.set(day, (dayViews.get(day) ?? 0) + v.value);
+            }
+          }
+        } else if (typeof total === "number") {
+          dayViews.set(todayUtc(), total);
+        }
+      } catch {
+        // métrica de views do Threads indisponível — não inventar dado
+      }
+
+      const maxDay = dayViews.size
+        ? [...dayViews.keys()].sort((a, b) => b.localeCompare(a))[0]!
+        : todayUtc();
+      if (dayViews.size) {
+        for (const [day, views] of dayViews) {
+          await supabaseAdmin.from("account_daily_metrics").upsert(
+            {
+              user_id: userId,
+              account_id: acc.id,
+              day,
+              views,
+              followers: day === maxDay ? followers : null,
+            },
+            { onConflict: "account_id,day" },
+          );
+        }
+      } else if (followers !== null) {
+        await supabaseAdmin.from("account_daily_metrics").upsert(
+          { user_id: userId, account_id: acc.id, day: todayUtc(), followers },
+          { onConflict: "account_id,day" },
+        );
+      }
+
+      // Threads recentes + métricas por publicação.
+      try {
+        const list = await threads(
+          `${THREADS_API}/me/threads?fields=id,text,media_type,media_url,thumbnail_url,permalink,timestamp&limit=${limitPerAccount}&access_token=${encodeURIComponent(token)}`,
+        );
+        const items = ((list["data"] as Record<string, unknown>[] | undefined) ?? []).slice(0, limitPerAccount);
+        for (const item of items) {
+          const threadId = String(item["id"] ?? "");
+          if (!threadId) continue;
+          const bag: Record<string, number | null> = { views: null, likes: null, replies: null, reposts: null, quotes: null };
+          try {
+            const ins = await threads(
+              `${THREADS_API}/${threadId}/insights?metric=views,likes,replies,reposts,quotes&access_token=${encodeURIComponent(token)}`,
+            );
+            bag["views"] = metricValue(ins, "views");
+            bag["likes"] = metricValue(ins, "likes");
+            bag["replies"] = metricValue(ins, "replies");
+            bag["reposts"] = metricValue(ins, "reposts");
+            bag["quotes"] = metricValue(ins, "quotes");
+          } catch {
+            // insights indisponíveis para este thread (ex.: muito recente)
+          }
+          const reposts = bag["reposts"];
+          const quotes = bag["quotes"];
+          const shares = reposts === null && quotes === null ? null : (reposts ?? 0) + (quotes ?? 0);
+          const publishedAt = typeof item["timestamp"] === "string" ? item["timestamp"] : null;
+          const mediaType = String(item["media_type"] ?? "TEXT");
+          const unavailable: string[] = Object.entries(bag)
+            .filter(([, v]) => v === null)
+            .map(([k]) => k);
+          const { data: row } = await supabaseAdmin
+            .from("ig_media")
+            .upsert(
+              {
+                user_id: userId,
+                account_id: acc.id,
+                ig_media_id: threadId,
+                media_type: mediaType,
+                format: mediaType === "CAROUSEL_ALBUM" ? "CAROUSEL" : mediaType,
+                caption: typeof item["text"] === "string" ? (item["text"] as string) : null,
+                hashtags: [],
+                permalink: typeof item["permalink"] === "string" ? (item["permalink"] as string) : null,
+                thumbnail_url: (item["thumbnail_url"] as string) ?? (item["media_url"] as string) ?? null,
+                media_url: (item["media_url"] as string) ?? null,
+                published_at: publishedAt,
+                views: bag["views"],
+                likes: bag["likes"],
+                comments: bag["replies"],
+                shares,
+                reach: null,
+                saved: null,
+                total_interactions: null,
+                unavailable_metrics: unavailable,
+                last_synced_at: nowIso,
+              },
+              { onConflict: "account_id,ig_media_id" },
+            )
+            .select("id")
+            .single();
+          if (row?.id) mediaUpserted++;
+        }
+      } catch (e) {
+        errors++;
+        messages.push(`@${acc.username}: mídias do Threads indisponíveis (${e instanceof Error ? e.message : "erro"}).`);
+      }
+
+    } catch (e) {
+      errors++;
+      messages.push(`@${acc.username}: ${e instanceof Error ? e.message : "falha ao coletar Threads."}`);
+    }
+  }
+
+  return { accounts_processed: accounts.length, media_upserted: mediaUpserted, errors, messages: messages.slice(0, 5) };
+}
+
+

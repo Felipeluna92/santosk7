@@ -813,7 +813,9 @@ async function viewsInWindow(env: ReturnType<typeof readMetaEnv>, token: string,
   return typeof value === "number" ? value : null;
 }
 
-export async function fetchAccountsInsights(userId: string) {
+// Implementações legadas de leitura ao vivo (substituídas pelas versões que
+// leem o banco de métricas oficiais). Mantidas apenas para não quebrar histórico.
+async function legacyFetchAccountsInsights(userId: string) {
   const env = readMetaEnv();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: accounts } = await supabaseAdmin
@@ -881,7 +883,7 @@ export async function fetchAccountsInsights(userId: string) {
 }
 
 
-export async function fetchInsightsTimeseries(userId: string, days = 30) {
+async function legacyFetchInsightsTimeseries(userId: string, days = 30) {
   const env = readMetaEnv();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: accounts } = await supabaseAdmin
@@ -1015,7 +1017,7 @@ export type PostMetric = {
 };
 
 /** Métricas por publicação (views, curtidas, compartilhamentos) dos últimos N dias. */
-export async function fetchPostsMetrics(userId: string, days = 30) {
+async function legacyFetchPostsMetrics(userId: string, days = 30) {
   const env = readMetaEnv();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: accounts } = await supabaseAdmin
@@ -1113,3 +1115,286 @@ export async function fetchPostsMetrics(userId: string, days = 30) {
     errors,
   };
 }
+
+// ===========================================================================
+// Leituras de métricas 100% a partir dos dados oficiais coletados no banco.
+// Nenhuma chamada direta à API da Meta acontece aqui: exibimos exatamente o
+// que o coletor gravou na última sincronização oficial (ig_media e
+// account_daily_metrics). Dado ausente continua ausente — nunca vira zero.
+// ===========================================================================
+
+export type DailyMetricRow = {
+  account_id: string;
+  day: string;
+  followers: number | null;
+  views: number | null;
+  reach: number | null;
+  profile_views: number | null;
+};
+
+export function todayUtc(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function shiftDay(day: string, delta: number): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Contas conectadas de uma plataforma (leitura pura do banco). */
+export async function accountsForPlatform(userId: string, platform: "instagram" | "threads") {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("instagram_accounts")
+    .select("id, username, platform, profile_picture_url, account_type, last_sync_at, status")
+    .eq("user_id", userId)
+    .eq("platform", platform)
+    .eq("status", "connected")
+    .order("created_at", { ascending: true });
+  return (data ?? []) as {
+    id: string;
+    username: string;
+    platform: string;
+    profile_picture_url: string | null;
+    account_type: string | null;
+    last_sync_at: string | null;
+    status: string;
+  }[];
+}
+
+/** Linhas diárias (oficiais) de métricas de conta a partir de `fromDay` (inclusive). */
+export async function dailyMetricRows(
+  userId: string,
+  accountIds: string[],
+  fromDay?: string,
+): Promise<DailyMetricRow[]> {
+  if (accountIds.length === 0) return [];
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  let query = supabaseAdmin
+    .from("account_daily_metrics")
+    .select("account_id, day, followers, views, reach, profile_views")
+    .eq("user_id", userId)
+    .in("account_id", accountIds)
+    .order("day", { ascending: false });
+  if (fromDay) query = query.gte("day", fromDay);
+  const { data } = await query;
+  return (data ?? []) as DailyMetricRow[];
+}
+
+/**
+ * Soma oficial de uma métrica de conta em janelas de dias *completos* (ontem
+ * para trás). Devolve também quantos dias da janela tinham dado real, para a
+ * interface nunca tratar ausência como zero.
+ */
+export function aggregateDailyWindow(
+  rows: DailyMetricRow[],
+  accountId: string,
+  metric: "views" | "reach" | "profile_views",
+  days: number,
+): { value: number | null; daysAvailable: number; daysExpected: number } {
+  const today = todayUtc();
+  const from = shiftDay(today, -days);
+  const lastComplete = shiftDay(today, -1);
+  const mine = rows.filter(
+    (r) => r.account_id === accountId && r.day >= from && r.day <= lastComplete,
+  );
+  let sum = 0;
+  let available = 0;
+  for (const row of mine) {
+    const v = row[metric];
+    if (typeof v === "number") {
+      sum += v;
+      available++;
+    }
+  }
+  return { value: available ? sum : null, daysAvailable: available, daysExpected: days };
+}
+
+/** Seguidores: último valor oficial coletado (dia mais recente que tiver dado). */
+export function latestFollowers(rows: DailyMetricRow[], accountId: string): number | null {
+  for (const row of rows) {
+    if (row.account_id === accountId && typeof row.followers === "number") return row.followers;
+  }
+  return null;
+}
+
+/** Série diária (views + seguidores) somada por dia entre as contas da plataforma. */
+export async function readDailySeries(userId: string, platform: "instagram" | "threads", days: number) {
+  const accounts = await accountsForPlatform(userId, platform);
+  const rows = await dailyMetricRows(userId, accounts.map((a) => a.id), shiftDay(todayUtc(), -days));
+  const byDay = new Map<string, { views: number; followers: number | null; day: string }>();
+  let available = false;
+  for (const row of rows) {
+    const entry = byDay.get(row.day) ?? { day: row.day, views: 0, followers: null as number | null };
+    if (typeof row.views === "number") {
+      entry.views += row.views;
+      available = true;
+    }
+    if (typeof row.followers === "number") {
+      entry.followers = entry.followers === null ? row.followers : Math.max(entry.followers, row.followers);
+    }
+    byDay.set(row.day, entry);
+  }
+  return {
+    available,
+    points: Array.from(byDay.values())
+      .sort((a, b) => a.day.localeCompare(b.day))
+      .map((p) => ({ day: p.day, views: p.views, followers: p.followers })),
+  };
+}
+
+const NO_DATA_MESSAGE =
+  "Nenhuma métrica coletada ainda. Use o botão Sincronizar agora para buscar os dados oficiais da conta.";
+
+type AccountInsightRow = {
+  accountId: string;
+  username: string;
+  followers: number | null;
+  mediaCount: number | null;
+  views: number | null;
+  views7d: number | null;
+  views30d: number | null;
+  reach7d: number | null;
+  error?: string;
+};
+
+/** Resumo por conta do Instagram a partir dos dados oficiais armazenados. */
+export async function fetchAccountsInsights(userId: string): Promise<AccountInsightRow[]> {
+  const accounts = await accountsForPlatform(userId, "instagram");
+  const rows = await dailyMetricRows(userId, accounts.map((a) => a.id));
+  return accounts.map((acc) => {
+    const w1 = aggregateDailyWindow(rows, acc.id, "views", 1);
+    const w7 = aggregateDailyWindow(rows, acc.id, "views", 7);
+    const w30 = aggregateDailyWindow(rows, acc.id, "views", 30);
+    const reach7 = aggregateDailyWindow(rows, acc.id, "reach", 7);
+    const followers = latestFollowers(rows, acc.id);
+    const row: AccountInsightRow = {
+      accountId: acc.id,
+      username: acc.username,
+      followers,
+      mediaCount: null,
+      views: w1.value,
+      views7d: w7.value,
+      views30d: w30.value,
+      reach7d: reach7.value,
+    };
+    if (followers === null && w30.daysAvailable === 0 && w7.daysAvailable === 0) {
+      row.error = NO_DATA_MESSAGE;
+    }
+    return row;
+  });
+}
+
+/** Série diária oficial de views e seguidores (Instagram) para o gráfico do painel. */
+export async function fetchInsightsTimeseries(userId: string, days = 30) {
+  return readDailySeries(userId, "instagram", days);
+}
+
+export type PostMetric = {
+  id: string;
+  accountId: string;
+  username: string;
+  caption: string;
+  mediaType: string;
+  thumbnail: string | null;
+  permalink: string | null;
+  timestamp: string;
+  views: number | null;
+  likes: number | null;
+  shares: number | null;
+  comments: number | null;
+  reach: number | null;
+};
+
+type StoredMediaRow = {
+  id: string;
+  account_id: string;
+  caption: string | null;
+  media_type: string | null;
+  format: string;
+  thumbnail_url: string | null;
+  permalink: string | null;
+  published_at: string | null;
+  views: number | null;
+  likes: number | null;
+  shares: number | null;
+  comments: number | null;
+  reach: number | null;
+};
+
+/** Mídias oficiais armazenadas de uma plataforma publicadas nos últimos N dias. */
+export async function storedMediaRows(
+  userId: string,
+  platform: "instagram" | "threads",
+  days: number,
+): Promise<{ posts: PostMetric[]; errors: string[] }> {
+  const accounts = await accountsForPlatform(userId, platform);
+  const ids = accounts.map((a) => a.id);
+  if (ids.length === 0) return { posts: [], errors: [] };
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const cutoff = new Date(Date.now() - days * 86400_000).toISOString();
+  const { data } = await supabaseAdmin
+    .from("ig_media")
+    .select(
+      "id, account_id, caption, media_type, format, thumbnail_url, permalink, published_at, views, likes, shares, comments, reach",
+    )
+    .eq("user_id", userId)
+    .in("account_id", ids)
+    .gte("published_at", cutoff)
+    .order("published_at", { ascending: false });
+  const byUsername = new Map(accounts.map((a) => [a.id, a.username]));
+  const posts = ((data ?? []) as StoredMediaRow[]).map((m) => ({
+    id: m.id,
+    accountId: m.account_id,
+    username: byUsername.get(m.account_id) ?? "conta",
+    caption: m.caption ?? "",
+    mediaType: m.media_type ?? m.format,
+    thumbnail: m.thumbnail_url,
+    permalink: m.permalink,
+    timestamp: m.published_at ?? "",
+    views: m.views,
+    likes: m.likes,
+    shares: m.shares,
+    comments: m.comments,
+    reach: m.reach,
+  }));
+  return { posts, errors: [] };
+}
+
+function sumPresent(posts: PostMetric[], key: "views" | "likes" | "shares" | "comments" | "reach") {
+  const values = posts.filter((p) => p[key] !== null && p[key] !== undefined);
+  if (values.length === 0) return null;
+  return values.reduce((acc, p) => acc + (p[key] as number), 0);
+}
+
+/** Métricas por publicação do Instagram a partir dos dados oficiais armazenados. */
+export async function fetchPostsMetrics(userId: string, days = 30) {
+  const { posts, errors } = await storedMediaRows(userId, "instagram", days);
+  const byDay = new Map<string, { day: string; views: number | null; likes: number | null; shares: number | null }>();
+  for (const p of posts) {
+    const day = p.timestamp.slice(0, 10);
+    const bucket = byDay.get(day) ?? { day, views: null, likes: null, shares: null };
+    bucket.views = bucket.views === null && p.views === null ? null : (bucket.views ?? 0) + (p.views ?? 0);
+    bucket.likes = bucket.likes === null && p.likes === null ? null : (bucket.likes ?? 0) + (p.likes ?? 0);
+    bucket.shares = bucket.shares === null && p.shares === null ? null : (bucket.shares ?? 0) + (p.shares ?? 0);
+    byDay.set(day, bucket);
+  }
+  return {
+    posts,
+    series: Array.from(byDay.entries())
+      .map(([day, v]) => ({ day, ...v }))
+      .sort((a, b) => a.day.localeCompare(b.day)),
+    totals: {
+      views: sumPresent(posts, "views"),
+      likes: sumPresent(posts, "likes"),
+      shares: sumPresent(posts, "shares"),
+      comments: sumPresent(posts, "comments"),
+      reach: sumPresent(posts, "reach"),
+    },
+    errors,
+  };
+}
+
+
+
