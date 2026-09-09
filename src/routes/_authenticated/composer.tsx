@@ -652,6 +652,29 @@ function Composer() {
                   </div>
                 </div>
 
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: "Em 15 min", ms: 15 * 60_000 },
+                    { label: "Em 1 hora", ms: 60 * 60_000 },
+                    { label: "Em 3 horas", ms: 3 * 60 * 60_000 },
+                    { label: "Amanhã, mesma hora", ms: 24 * 60 * 60_000 },
+                  ].map((q) => (
+                    <button
+                      key={q.label}
+                      type="button"
+                      onClick={() => {
+                        const d = new Date(Date.now() + q.ms);
+                        const pad = (n: number) => String(n).padStart(2, "0");
+                        setSchedDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+                        setSchedTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
+                      }}
+                      className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                    >
+                      {q.label}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="space-y-2 rounded-md border border-border bg-background/60 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <Label className="text-xs">Repetir este conteúdo em outros horários</Label>
