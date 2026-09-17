@@ -1,5 +1,5 @@
 // Server-only account health monitoring using the official Instagram Graph API.
-import { humanizeMetaError, readMetaEnv, writeLog } from "./meta.server";
+import { humanizeMetaError, readMetaEnv, refreshAccountTokenIfNeeded, writeLog } from "./meta.server";
 import { sendPushToUser } from "./push.server";
 
 type CheckResult = {
@@ -26,12 +26,22 @@ export async function checkAccountsHealth(userId: string) {
 
   const { data: accounts } = await supabaseAdmin
     .from("instagram_accounts")
-    .select("id, username, status")
+    .select("id, username, status, platform")
     .eq("user_id", userId);
 
   const results: CheckResult[] = [];
 
   for (const acc of accounts ?? []) {
+    // Instagram: renova preventivamente o token de longa duração para a conta
+    // nunca cair por expiração silenciosa. Threads usa outro fluxo de token.
+    if (acc.platform !== "threads") {
+      try {
+        await refreshAccountTokenIfNeeded(acc.id, userId);
+      } catch {
+        // Renovação é melhor-effort; o health check abaixo decide o status.
+      }
+    }
+
     const { data: tokenRow } = await supabaseAdmin
       .from("account_tokens")
       .select("access_token")
@@ -41,19 +51,29 @@ export async function checkAccountsHealth(userId: string) {
 
     let ok = false;
     let message: string | null = null;
+    /**
+     * Só erro DEFINITIVO (token revogado/expirado, falta de permissão) derruba a
+     * conta. Instabilidade (rate limit, 5xx, rede) NÃO muda o status — antes,
+     * qualquer falha marcava `restricted` e a conta "desconectava" sozinha,
+     * sumindo com os insights até uma sincronização manual.
+     */
+    let definitive = false;
 
     if (!tokenRow?.access_token) {
       message = "Nenhum token salvo para esta conta. Reconecte na tela de Configuração.";
+      definitive = true;
     } else {
       try {
-        const res = await fetch(
-          `https://graph.instagram.com/${env.graphVersion}/me?fields=user_id,username,account_type&access_token=${encodeURIComponent(
-            tokenRow.access_token,
-          )}`,
-        );
+        const endpoint =
+          acc.platform === "threads"
+            ? "https://graph.threads.net/v1.0/me?fields=id,username"
+            : `https://graph.instagram.com/${env.graphVersion}/me?fields=user_id,username,account_type`;
+        const res = await fetch(`${endpoint}&access_token=${encodeURIComponent(tokenRow.access_token)}`);
         const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
         if (!res.ok || json["error"]) {
           message = humanizeMetaError(json);
+          const code = (json["error"] as { code?: number } | undefined)?.code;
+          definitive = code === 190 || code === 10 || code === 102 || code === 200;
         } else {
           ok = true;
         }
@@ -72,7 +92,7 @@ export async function checkAccountsHealth(userId: string) {
       .is("resolved_at", null)
       .maybeSingle();
 
-    if (!ok && message) {
+    if (!ok && message && definitive) {
       const { kind, label } = classify(message);
       await supabaseAdmin
         .from("instagram_accounts")
@@ -96,6 +116,15 @@ export async function checkAccountsHealth(userId: string) {
           tag: `account-${acc.id}`,
         });
       }
+    } else if (!ok && message) {
+      // Falha transitória: registra no log, mas mantém a conta conectada.
+      await writeLog(
+        userId,
+        "monitor",
+        "warn",
+        `@${acc.username}: instabilidade temporária na verificação (${message}).`,
+        { accountId: acc.id },
+      );
     } else if (ok) {
       await supabaseAdmin
         .from("instagram_accounts")

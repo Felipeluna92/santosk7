@@ -13,6 +13,12 @@ import { accountsQuery, fmtDate } from "@/lib/data";
 import { demoAccounts } from "@/lib/demo";
 import { disconnectAccount, syncAccount } from "@/lib/meta.functions";
 
+/** Rótulo amigável para o status da conta no banco. */
+const ACCOUNT_STATUS_LABEL: Record<string, string> = {
+  connected: "Conectada",
+  restricted: "Verificar conexão",
+};
+
 export const Route = createFileRoute("/_authenticated/contas")({
   head: () => ({
     meta: [
@@ -126,7 +132,7 @@ function ContasPage() {
                     acc.status === "connected" ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
                   }`}
                 >
-                  {acc.status === "connected" ? "Conectada" : acc.status}
+                  {ACCOUNT_STATUS_LABEL[acc.status] ?? acc.status}
                 </Badge>
               </div>
 

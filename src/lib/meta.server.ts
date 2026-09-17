@@ -211,6 +211,9 @@ export async function exchangeCodeForAccount(code: string, userId: string) {
     account_id: account.id,
   });
 
+  // Busca as métricas oficiais agora para o painel já exibir insights da conta nova.
+  await collectInitialInsights(userId);
+
   return account;
 }
 
@@ -277,6 +280,9 @@ export async function connectWithAccessToken(rawToken: string, userId: string) {
     account_id: account.id,
   });
 
+  // Busca as métricas oficiais agora para o painel já exibir insights da conta nova.
+  await collectInitialInsights(userId);
+
   return { id: account.id, username: account.username };
 }
 
@@ -292,28 +298,105 @@ export async function tokenFor(accountId: string, userId: string) {
   return data.access_token;
 }
 
+/**
+ * Renova preventivamente o token de longa duração do Instagram quando está a
+ * menos de 14 dias de expirar. Tokens long-lived duram 60 dias e podem ser
+ * renovados enquanto válidos — assim a conta nunca "cai" por expiração
+ * silenciosa (o monitor de contas chama esta função a cada verificação).
+ */
+export async function refreshAccountTokenIfNeeded(accountId: string, userId: string): Promise<boolean> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: account } = await supabaseAdmin
+    .from("instagram_accounts")
+    .select("token_expires_at")
+    .eq("id", accountId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  const expiresAt = account?.token_expires_at ? Date.parse(account.token_expires_at) : NaN;
+  // Sem validade conhecida (token manual) ou já expirado: não tenta renovar —
+  // token expirado só resolvendo com reconexão.
+  if (!Number.isFinite(expiresAt)) return false;
+  const REFRESH_AHEAD_MS = 14 * 86400_000;
+  if (expiresAt - Date.now() > REFRESH_AHEAD_MS) return false;
+
+  const { data: tokenRow } = await supabaseAdmin
+    .from("account_tokens")
+    .select("access_token")
+    .eq("account_id", accountId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!tokenRow?.access_token) return false;
+
+  try {
+    const refreshed = await graph(
+      `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${encodeURIComponent(
+        tokenRow.access_token,
+      )}`,
+    );
+    const newToken = String(refreshed["access_token"] ?? "");
+    const expiresIn = Number(refreshed["expires_in"] ?? 0) || 60 * 86400;
+    if (!newToken) return false;
+    await supabaseAdmin
+      .from("account_tokens")
+      .update({ access_token: newToken })
+      .eq("account_id", accountId)
+      .eq("user_id", userId);
+    await supabaseAdmin
+      .from("instagram_accounts")
+      .update({ token_expires_at: new Date(Date.now() + expiresIn * 1000).toISOString() })
+      .eq("id", accountId)
+      .eq("user_id", userId);
+    await writeLog(userId, "token", "success", "Token de longa duração renovado automaticamente.", { accountId });
+    return true;
+  } catch (e) {
+    await writeLog(
+      userId,
+      "token",
+      "warn",
+      `Renovação automática do token falhou: ${e instanceof Error ? e.message : "erro"}.`,
+      { accountId },
+    );
+    return false;
+  }
+}
+
+/** Coleta inicial leve logo após conectar: o painel já nasce com insights oficiais. */
+export async function collectInitialInsights(userId: string) {
+  try {
+    const { syncInsights } = await import("./collect.server");
+    return await syncInsights(userId, { deep: true, limitPerAccount: 12 });
+  } catch (e) {
+    await writeLog(
+      userId,
+      "insights",
+      "warn",
+      `Coleta inicial pós-conexão falhou: ${e instanceof Error ? e.message : "erro"}.`,
+    );
+    return null;
+  }
+}
+
 export async function syncAccountById(accountId: string, userId: string) {
   const env = readMetaEnv();
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: row } = await supabaseAdmin
+    .from("instagram_accounts")
+    .select("platform")
+    .eq("id", accountId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  // Renova o token antes de usar (evita expiração silenciosa no meio do sync).
+  await refreshAccountTokenIfNeeded(accountId, userId);
   const token = await tokenFor(accountId, userId);
-  {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row } = await supabaseAdmin
-      .from("instagram_accounts")
-      .select("platform")
-      .eq("id", accountId)
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (row?.platform === "threads") {
-      const { syncThreadsAccount } = await import("./threads.server");
-      return syncThreadsAccount(accountId, userId, token);
-    }
+  if (row?.platform === "threads") {
+    const { syncThreadsAccount } = await import("./threads.server");
+    return syncThreadsAccount(accountId, userId, token);
   }
   const me = await graph(
     `https://graph.instagram.com/${env.graphVersion}/me?fields=user_id,username,name,profile_picture_url,account_type&access_token=${encodeURIComponent(
       token,
     )}`,
   );
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   await supabaseAdmin
     .from("instagram_accounts")
     .update({
