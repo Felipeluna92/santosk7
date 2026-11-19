@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bem-vindo — Bot Lab</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="card wide">
+    <h1 id="welcome-title">Conta criada</h1>
+    <p class="sub">Resultado do detector para esta submissão.</p>
+    <section id="result" hidden>
+      <div>Pontuação: <span id="score" class="score">–</span> / 100</div>
+      <div>Veredito: <strong id="verdict">–</strong></div>
+      <h2>Sinais disparados</h2>
+      <ul id="signals"></ul>
+    </section>
+    <p class="alt"><a href="/login" data-keep-label>Ir para o login</a> · <a href="/signup" data-keep-label>Novo cadastro</a></p>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

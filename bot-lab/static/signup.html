@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cadastro — Bot Lab</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/collector.js"></script>
+</head>
+<body>
+  <main class="card">
+    <h1>Criar conta</h1>
+    <p class="sub">Aplicação local do laboratório de detecção.</p>
+    <form data-kind="signup" novalidate>
+      <label for="name">Nome</label>
+      <input id="name" name="name" type="text" autocomplete="name" required>
+      <div class="error" data-error-for="name"></div>
+
+      <label for="email">E-mail</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+      <div class="error" data-error-for="email"></div>
+
+      <label for="password">Senha</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" required>
+      <div class="error" data-error-for="password"></div>
+
+      <label for="confirm">Confirmar senha</label>
+      <input id="confirm" name="confirm" type="password" autocomplete="new-password" required>
+      <div class="error" data-error-for="confirm"></div>
+
+      <div class="hp" aria-hidden="true">
+        <label for="website">Site</label>
+        <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+      </div>
+
+      <label class="check"><input id="terms" name="terms" type="checkbox"> Aceito os termos de uso</label>
+      <div class="error" data-error-for="terms"></div>
+
+      <button id="submit" type="submit">Cadastrar</button>
+      <div class="error" data-error-for="_"></div>
+    </form>
+    <p class="alt">Já tem conta? <a href="/login" data-keep-label>Entrar</a></p>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

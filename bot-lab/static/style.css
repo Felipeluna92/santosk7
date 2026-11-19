@@ -1,0 +1,85 @@
+:root {
+  --bg: #f6f5f2;
+  --card: #ffffff;
+  --ink: #1d1d1b;
+  --muted: #6b6a66;
+  --line: #dcdad4;
+  --accent: #2f5d50;
+  --error: #b3261e;
+  --ok: #2f6b3a;
+  --warn: #8a5a00;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161615;
+    --card: #20201e;
+    --ink: #ecebe7;
+    --muted: #a3a29c;
+    --line: #3a3936;
+    --accent: #7fb8a6;
+    --error: #ff8a80;
+    --ok: #8fd19e;
+    --warn: #f0c060;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 28px 24px;
+}
+.card.wide { max-width: 640px; }
+h1 { margin: 0 0 4px; font-size: 1.5rem; }
+.sub { margin: 0 0 20px; color: var(--muted); font-size: 0.95rem; }
+label { display: block; font-weight: 600; font-size: 0.9rem; margin: 14px 0 4px; }
+input[type="text"], input[type="email"], input[type="password"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+input[aria-invalid="true"] { border-color: var(--error); }
+.check { display: flex; gap: 8px; align-items: center; font-weight: 400; }
+.error { color: var(--error); font-size: 0.85rem; min-height: 1.2em; }
+button {
+  margin-top: 18px;
+  width: 100%;
+  padding: 11px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--card);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:disabled { opacity: 0.6; cursor: wait; }
+.alt { margin-top: 16px; font-size: 0.9rem; color: var(--muted); text-align: center; }
+a { color: var(--accent); }
+/* honeypot: fora da tela, fora da ordem de tab, ignorado por leitores de tela */
+.hp { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+.score { font-size: 2.4rem; font-weight: 700; }
+[data-verdict="humano provável"] { color: var(--ok); }
+[data-verdict="suspeito"] { color: var(--warn); }
+[data-verdict="bot provável"] { color: var(--error); }
+#signals { padding-left: 18px; }
+#signals li { margin-bottom: 10px; }
+.tag { font-size: 0.75rem; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; color: var(--muted); }
+.detail { color: var(--muted); font-size: 0.85rem; overflow-wrap: anywhere; }
