@@ -10,3 +10,6 @@
 - [x] Add per-account diagnostics and actionable recommendations
 - [x] Verify core screens on desktop and mobile
 - [x] Redesign publishing as a library-first workspace with clearer actions
+- [x] Diagnose the login fetch failure across shared connection paths (auth service returns HTTP 521)
+- [x] Apply security dependency update and resolve compatibility errors; preview build OK
+- [ ] Verify successful login and connected screens after Lovable Cloud finishes starting (blocked by auth service availability)
